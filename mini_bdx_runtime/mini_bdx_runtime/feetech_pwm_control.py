@@ -47,9 +47,9 @@ class FeetechPWMControl:
         self.io.set_mode({id: 0 for id in self.ids})
         self.io.disable_torque(self.ids)
 
-    # def enable_torque(self):
-    #     self.io.enable_torque(self.ids)
-    #     self.io.set_mode({id: 2 for id in self.ids})
+    def enable_torque(self):
+        self.io.enable_torque(self.ids)
+        self.io.set_mode({id: 2 for id in self.ids})
 
     def freeze(self):
         present_position = list(self.io.get_present_position(self.ids))
@@ -108,7 +108,7 @@ class FeetechPWMControl:
 
 if __name__ == "__main__":
     ids = [1, 2]
-    pwm_control = FeetechPWMControl(ids)
+    pwm_control = FeetechPWMControl(ids, [0, 0])
     pwm_control.enable_torque()
     pwm_control.set_kps([32, 32])
 
