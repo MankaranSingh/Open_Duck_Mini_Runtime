@@ -1,3 +1,4 @@
+
 from pypot.feetech import FeetechSTS3215IO
 import time
 import numpy as np
@@ -47,9 +48,9 @@ class FeetechPWMControl:
         self.io.set_mode({id: 0 for id in self.ids})
         self.io.disable_torque(self.ids)
 
-    # def enable_torque(self):
-    #     self.io.enable_torque(self.ids)
-    #     self.io.set_mode({id: 2 for id in self.ids})
+    #def enable_torque(self):
+    #    self.io.enable_torque(self.ids)
+    #    self.io.set_mode({id: 2 for id in self.ids})
 
     def freeze(self):
         present_position = list(self.io.get_present_position(self.ids))
@@ -116,17 +117,19 @@ class FeetechPWMControl:
 
 
 if __name__ == "__main__":
-    ids = [1, 2]
-    pwm_control = FeetechPWMControl(ids)
-    pwm_control.enable_torque()
-    pwm_control.set_kps([32, 32])
+    ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+    pwm_control = FeetechPWMControl(ids, [0]*len(ids))
+    #pwm_control.enable_torque()
+    #pwm_control.set_kps([32])
 
-    pwm_control.goal_positions = [-90, -90]
+    init = pwm_control.present_positions
     try:
         while True:
-            pwm_control.goal_positions = [90, 90]
-            time.sleep(1)
-            pwm_control.goal_positions = [-90, -90]
-            time.sleep(1)
-    except KeyboardInterrupt:
+            print(pwm_control.present_positions)
+            #pwm_control.goal_positions = [init]
+            time.sleep(0.5)
+            #print(pwm_control.present_positions)
+            #pwm_control.goal_positions = [init+5]
+            #time.sleep(0.5)
+    except:
         pwm_control.disable_torque()
