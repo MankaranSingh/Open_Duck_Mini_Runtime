@@ -12,22 +12,22 @@ class HWI:
 
         # Order matters here
         self.joints = {
-            "left_hip_yaw": 20,
-            "left_hip_roll": 21,
-            "left_hip_pitch": 22,
-            "left_knee": 23,
-            "left_ankle": 24,
-            "neck_pitch": 30,
-            "head_pitch": 31,
-            "head_yaw": 32,
-            "head_roll": 33,
+            "left_hip_yaw": 8,
+            "left_hip_roll": 9,
+            "left_hip_pitch": 6,
+            "left_knee": 4,
+            "left_ankle": 2,
+            "neck_pitch": 1,
+            "head_pitch": 12,
+            "head_yaw": 13,
+            "head_roll": 14,
             # "left_antenna": None,
             # "right_antenna": None,
             "right_hip_yaw": 10,
             "right_hip_roll": 11,
-            "right_hip_pitch": 12,
-            "right_knee": 13,
-            "right_ankle": 14,
+            "right_hip_pitch": 7,
+            "right_knee": 5,
+            "right_ankle": 3,
         }
 
         self.zero_pos = {
