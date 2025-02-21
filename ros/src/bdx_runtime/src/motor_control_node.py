@@ -13,6 +13,7 @@ class JointController:
 
         # Initialize hardware interface and set starting target positions
         self.hwi = HWI(usb_port="/dev/ttyACM0")
+        self.hwi.turn_off()
         self.target_positions = self.hwi.init_pos.copy()  # start with the hardware's init positions
 
         self.dummy_joints = ["right_antenna", "left_antenna"] # Dummy joints for urdf viz. Not controlled by hardware.
