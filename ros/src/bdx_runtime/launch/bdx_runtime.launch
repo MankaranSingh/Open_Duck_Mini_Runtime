@@ -9,6 +9,6 @@
 
   <!-- Launch joint_state_publisher with a custom parameter for source_list -->
   <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher" output="screen">
-    <param name="source_list" value="current_joint_states" />
+    <param name="source_list" value="['current_joint_states']" type="yaml" />
   </node>
 </launch>
