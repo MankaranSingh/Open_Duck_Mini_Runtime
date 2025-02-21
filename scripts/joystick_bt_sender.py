@@ -37,8 +37,6 @@ def send_controller_data(target_mac):
 
             message = f"{x},{y},{yaw}"
             sock.send(message)
-            print(f"Sent: {message}")
-
             time.sleep(1 / 50)  # Maintain 50 Hz
 
     except bluetooth.btcommon.BluetoothError as e:

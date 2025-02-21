@@ -25,8 +25,6 @@ def listen_for_controller_data():
             
             try:
                 x, y, yaw = map(float, data.split(","))
-                print(f"Received - X: {x}, Y: {y}, Yaw: {yaw}")
-
                 # Publish as a ROS Twist message
                 twist_msg = Twist()
                 twist_msg.linear.x = x
