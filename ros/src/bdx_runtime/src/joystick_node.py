@@ -18,22 +18,33 @@ def listen_for_controller_data():
         client_sock, address = server_sock.accept()
         print(f"Accepted connection from {address}")
 
+        buffer = ""
+
         while not rospy.is_shutdown():
-            data = client_sock.recv(1024).decode("utf-8").strip()
+            data = client_sock.recv(1024).decode("utf-8")
             if not data:
                 continue
-            
-            try:
-                x, y, yaw = map(float, data.split(","))
-                # Publish as a ROS Twist message
-                twist_msg = Twist()
-                twist_msg.linear.x = x
-                twist_msg.linear.y = y
-                twist_msg.angular.z = yaw
-                pub.publish(twist_msg)
 
-            except ValueError:
-                print(f"Invalid data received: {data}")
+            buffer += data  # Append new data to buffer
+
+            while "\n" in buffer:  # Process all complete lines
+                line, buffer = buffer.split("\n", 1)  # Split at the first newline
+                line = line.strip()
+
+                if line:
+                    try:
+                        x, y, yaw = map(float, line.split(","))
+                        #print(f"Received - X: {x}, Y: {y}, Yaw: {yaw}")
+
+                        # Publish as a ROS Twist message
+                        twist_msg = Twist()
+                        twist_msg.linear.x = x
+                        twist_msg.linear.y = y
+                        twist_msg.angular.z = yaw
+                        pub.publish(twist_msg)
+
+                    except ValueError:
+                        print(f"Invalid data received: {line}")
 
             rate.sleep()
 
