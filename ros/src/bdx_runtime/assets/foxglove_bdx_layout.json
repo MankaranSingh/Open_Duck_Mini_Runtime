@@ -1,0 +1,182 @@
+{
+  "configById": {
+    "3D!2t03v0n": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 1.388856803743327,
+        "phi": 95.88346136354565,
+        "thetaOffset": -97.68022500304696,
+        "targetOffset": [
+          -0.008951712057140413,
+          -0.16607222030106625,
+          -4.4566644273112585e-21
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-none",
+      "scene": {
+        "meshUpAxis": "z_up",
+        "ignoreColladaUpAxis": true,
+        "transforms": {
+          "showLabel": false,
+          "lineWidth": 0,
+          "axisScale": 0
+        }
+      },
+      "transforms": {},
+      "topics": {},
+      "layers": {
+        "7b10fec6-0ca2-47a9-8ecf-565c83be1cec": {
+          "visible": true,
+          "frameLocked": true,
+          "label": "URDF",
+          "instanceId": "7b10fec6-0ca2-47a9-8ecf-565c83be1cec",
+          "layerId": "foxglove.Urdf",
+          "sourceType": "filePath",
+          "url": "",
+          "filePath": "/home/mankaran/Desktop/rl/AWD/awd/data/assets/mini2_bdx/mini2_bdx.urdf",
+          "parameter": "",
+          "topic": "",
+          "framePrefix": "",
+          "displayMode": "auto",
+          "fallbackColor": "#ffffff",
+          "order": 1
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    },
+    "Plot!3we7pao": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/imu/data.angular_velocity.x",
+          "enabled": true
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/imu/data.angular_velocity.y",
+          "enabled": true
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/imu/data.angular_velocity.z",
+          "enabled": true
+        }
+      ],
+      "minYValue": -1,
+      "maxYValue": 1,
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "Gyro",
+      "followingViewWidth": 60
+    },
+    "Plot!fce6wx": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/imu/data.orientation.x",
+          "enabled": true
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/imu/data.orientation.y",
+          "enabled": true
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/imu/data.orientation.z",
+          "enabled": true
+        }
+      ],
+      "minYValue": -1,
+      "maxYValue": 1,
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "followingViewWidth": 60
+    },
+    "Plot!qxk2s1": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/cmd_vel.linear.x",
+          "enabled": true,
+          "showLine": true
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/cmd_vel.linear.y",
+          "enabled": true
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/cmd_vel.angular.z",
+          "enabled": true
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "followingViewWidth": 10,
+      "minYValue": -2,
+      "maxYValue": 2
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "direction": "row",
+    "first": {
+      "first": {
+        "first": "3D!2t03v0n",
+        "second": "Plot!3we7pao",
+        "direction": "row"
+      },
+      "second": "Plot!fce6wx",
+      "direction": "column"
+    },
+    "second": "Plot!qxk2s1",
+    "splitPercentage": 57.84453609053417
+  }
+}
