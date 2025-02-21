@@ -23,18 +23,10 @@ print("IMU node running ..")
 while not rospy.is_shutdown():
     imu_msg = Imu()
     
-    # Read Euler angles
-    yaw, pitch, roll = sensor.euler
+    qw, qx, qy, qz = sensor.quaternion
     gyro = sensor.gyro
     lin_acc = sensor.linear_acceleration
-
-    yaw = 0.0 #math.radians(yaw)
-    pitch = math.radians(pitch)
-    roll = math.radians(roll)
-    
-    # Convert to quaternion
-    qx, qy, qz, qw = quaternion_from_euler(roll, pitch, yaw)
-    
+        
     # Fill IMU message
     imu_msg.header.stamp = rospy.Time.now()
     imu_msg.header.frame_id = "imu_link"
