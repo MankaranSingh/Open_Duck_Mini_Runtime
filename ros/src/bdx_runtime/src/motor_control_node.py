@@ -13,7 +13,7 @@ class JointController:
 
         # Initialize hardware interface and set starting target positions
         self.hwi = HWI(usb_port="/dev/ttyACM0")
-        self.hwi.turn_off()
+        self.hwi.turn_on()
         self.target_positions = self.hwi.init_pos.copy()  # start with the hardware's init positions
 
         self.dummy_joints = ["right_antenna", "left_antenna"] # Dummy joints for urdf viz. Not controlled by hardware.
@@ -31,6 +31,7 @@ class JointController:
         self.s_turn_on = rospy.Service("turn_on", Trigger, self.handle_turn_on)
         self.s_turn_off = rospy.Service("turn_off", Trigger, self.handle_turn_off)
         self.s_set_kps = rospy.Service("set_kps", Trigger, self.handle_set_kps)
+        self.s_set_kds = rospy.Service("set_kds", Trigger, self.handle_set_kds)
 
         self.rate = rospy.Rate(100)  # 10 Hz update rate
         rospy.loginfo("Joint Controller initialized.")
@@ -74,7 +75,7 @@ class JointController:
         """
         try:
             # Retrieve a single float value from the ROS parameter server (default: 32.0)
-            kps_value = rospy.get_param("~kps_value", 32.0)
+            kps_value = rospy.get_param("kp", 32.0)
             # Create a list with the same value for each joint
             kps_list = [kps_value] * len(self.hwi.joints)
             self.hwi.set_kps(kps_list)
@@ -84,6 +85,24 @@ class JointController:
         except Exception as e:
             rospy.logerr("Error in set_kps: %s", str(e))
             return TriggerResponse(success=False, message="Failed to set KP values: " + str(e))
+    
+    def handle_set_kds(self, req):
+        """
+        Service callback to set KP values.
+        It reads a single float from the parameter "~kds_value" and applies it to all joints.
+        """
+        try:
+            # Retrieve a single float value from the ROS parameter server (default: 32.0)
+            kds_value = rospy.get_param("kd", 0.00)
+            # Create a list with the same value for each joint
+            kds_list = [kds_value] * len(self.hwi.joints)
+            self.hwi.set_kds(kds_list)
+            message = "KD values set to {} for all joints.".format(kds_value)
+            rospy.loginfo(message)
+            return TriggerResponse(success=True, message=message)
+        except Exception as e:
+            rospy.logerr("Error in set_kds: %s", str(e))
+            return TriggerResponse(success=False, message="Failed to set KD values: " + str(e))
 
     def run(self):
         # Ensure hardware is safely turned off on shutdown.
@@ -100,15 +119,15 @@ class JointController:
 
             positions = self.hwi.get_present_positions()
             velocities = self.hwi.get_present_velocities()
-            voltages = self.hwi.get_present_voltages()
+            #voltages = self.hwi.get_present_voltages()
 
             msg.position = positions.tolist() if hasattr(positions, "tolist") else list(positions)
             msg.velocity = velocities.tolist() if hasattr(velocities, "tolist") else list(velocities)
-            msg.effort   = voltages.tolist()   if hasattr(voltages, "tolist")   else list(voltages)
+            #msg.effort   = voltages.tolist()   if hasattr(voltages, "tolist")   else list(voltages)
 
             msg.position += [0.0] * len(self.dummy_joints)
             msg.velocity += [0.0] * len(self.dummy_joints)
-            msg.effort   += [0.0] * len(self.dummy_joints) 
+            #msg.effort   += [0.0] * len(self.dummy_joints) 
 
             self.pub.publish(msg)
             self.rate.sleep()

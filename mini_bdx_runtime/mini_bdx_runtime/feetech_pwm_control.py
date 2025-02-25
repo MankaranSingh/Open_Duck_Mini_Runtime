@@ -25,11 +25,12 @@ class FeetechPWMControl:
 
         self.io.set_mode({id: 2 for id in self.ids})
         self.kps = np.ones(len(self.ids)) * 32  # default kp
-
+        self.kds = np.ones(len(self.ids)) * 0.0  # default kd
+ 
         self.init_pos_rad = init_pos_rad
         self.init_pos_deg = np.rad2deg(self.init_pos_rad)
 
-        self.control_freq = 100  # Hz
+        self.control_freq = 150  # Hz
         self.goal_positions = [0] * len(self.ids)
         self.goal_positions = self.init_pos_deg
         self.present_positions = [0] * len(self.ids)
@@ -43,6 +44,9 @@ class FeetechPWMControl:
 
     def set_kps(self, kps):
         self.kps = np.array(kps)
+
+    def set_kds(self, kds):
+        self.kds = np.array(kds)
 
     def disable_torque(self):
         self.io.set_mode({id: 0 for id in self.ids})
@@ -77,7 +81,7 @@ class FeetechPWMControl:
                 continue
             errors = np.array(self.goal_positions) - np.array(self.present_positions)
 
-            pwms = self.kps * errors
+            pwms = self.kps * errors - self.kds * np.array(self.present_speeds)
             pwms = np.int16(pwms)
             pwms = np.clip(pwms, -1000, 1000)
 

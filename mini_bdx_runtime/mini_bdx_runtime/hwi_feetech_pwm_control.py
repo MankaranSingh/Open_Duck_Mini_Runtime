@@ -98,10 +98,15 @@ class HWI:
 
         self.kps = np.ones(len(self.joints)) * 32  # default kp
         self.low_torque_kps = np.ones(len(self.joints)) * 8  # default kp
+        self.kds = np.ones(len(self.joints)) * 0.0  # default kp
 
     def set_kps(self, kps):
         self.kps = kps
         self.control.set_kps(self.kps)
+    
+    def set_kds(self, kds):
+        self.kds = kds
+        self.control.set_kds(self.kds)
 
     def turn_on(self):
         self.control.set_kps(self.low_torque_kps)
