@@ -87,6 +87,11 @@ class HWI:
             "right_ankle" : 0.0,
         }
 
+        self.set_kds(32)
+        self.set_kps(32)
+        self.set_kis(0)
+        self.get_pid_all()
+
     def set_pid(self, pid, joint_name):
         # TODO
         pass
