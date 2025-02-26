@@ -5,14 +5,15 @@ import time
 import signal
 from sensor_msgs.msg import JointState
 
+np.random.seed(42)
 
 # Parameters
-N_WAVES = 10  # Number of composite waves to generate
+N_WAVES = 5  # Number of composite waves to generate
 TARGET_JOINTS = ["left_knee"]  # List of joints to control
 PUBLISH_RATE = 100  # Hz
 TOTAL_DURATION = 10  # Duration of each composite wave in seconds
 DT = 1/PUBLISH_RATE  # Time step
-RESET_DURATION = 1.5  # Time to hold joints at zero before new wave
+RESET_DURATION = 3  # Time to hold joints at zero before new wave
 
 def composite_wave(total_duration=10, dt=0.01, lower=-45, upper=45, degrees=True, randomize_offsets=False):
     """
@@ -163,7 +164,7 @@ for wave_count in range(N_WAVES):
         t, y = composite_wave(total_duration=TOTAL_DURATION, dt=DT)
         wave_data[joint] = (t, y)
 
-    time.sleep(0.5)  # Wait for rosbag to start recording
+    time.sleep(5)  # Wait for rosbag to start recording
     index = 0
     while not rospy.is_shutdown():
         msg = JointState()
