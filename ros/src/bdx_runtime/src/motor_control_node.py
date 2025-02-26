@@ -4,7 +4,7 @@ import rospy
 from sensor_msgs.msg import JointState
 import numpy as np
 from std_srvs.srv import Trigger, TriggerResponse
-from mini_bdx_runtime.hwi_feetech_pwm_control import HWI 
+from mini_bdx_runtime.hwi_feetech_pypot import HWI 
 
 
 class JointController:
@@ -13,7 +13,7 @@ class JointController:
 
         # Initialize hardware interface and set starting target positions
         self.hwi = HWI(usb_port="/dev/ttyACM0")
-        self.hwi.turn_on()
+        self.hwi.turn_off()
         self.target_positions = self.hwi.init_pos.copy()  # start with the hardware's init positions
 
         self.dummy_joints = ["right_antenna", "left_antenna"] # Dummy joints for urdf viz. Not controlled by hardware.
