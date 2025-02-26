@@ -14,22 +14,22 @@ class HWI:
             use_sync_read=True,
         )
         self.joints = {
-            "left_hip_yaw": 20,
-            "left_hip_roll": 21,
-            "left_hip_pitch": 22,
-            "left_knee": 23,
-            "left_ankle": 24,
-            "neck_pitch": 30,
-            "head_pitch": 31,
-            "head_yaw": 32,
-            "head_roll": 33,
+            "left_hip_yaw": 8,
+            "left_hip_roll": 9,
+            "left_hip_pitch": 6,
+            "left_knee": 4,
+            "left_ankle": 2,
+            "neck_pitch": 1,
+            "head_pitch": 12,
+            "head_yaw": 13,
+            "head_roll": 14,
             # "left_antenna": None,
             # "right_antenna": None,
             "right_hip_yaw": 10,
             "right_hip_roll": 11,
-            "right_hip_pitch": 12,
-            "right_knee": 13,
-            "right_ankle": 14,
+            "right_hip_pitch": 7,
+            "right_knee": 5,
+            "right_ankle": 3,
         }
 
         self.zero_pos = {
@@ -52,62 +52,54 @@ class HWI:
         }
 
         self.init_pos = {
-            "left_hip_yaw": 0.002,
-            "left_hip_roll": 0.053,
-            "left_hip_pitch": -0.63,
-            "left_knee": 1.368,
-            "left_ankle": -0.784,
-            "neck_pitch": 0.002,
+            "left_hip_yaw": 0.0,
+            "left_hip_roll": 0.0,
+            "left_hip_pitch": 0.0,
+            "left_knee": 0.0,
+            "left_ankle": 0.0,
+            "neck_pitch": 0.0,
             "head_pitch": 0.0,
-            "head_yaw": 0,
-            "head_roll": 0,
-            # "left_antenna": 0,
-            # "right_antenna": 0,
-            "right_hip_yaw": -0.003,
-            "right_hip_roll": -0.065,
-            "right_hip_pitch": 0.635,
-            "right_knee": 1.379,
-            "right_ankle": -0.796,
+            "head_yaw": 0.0,
+            "head_roll": 0.0,
+            # "left_antenna": 0.0
+            # "right_antenna": 0.0
+            "right_hip_yaw": 0.0,
+            "right_hip_roll": 0.0,
+            "right_hip_pitch": 0.0,
+            "right_knee": 0.0,
+            "right_ankle": 0.0,
         }
 
-        # self.init_pos = self.zero_pos  # TODO REMOVE
-
         self.joints_offsets = {
-            "left_hip_yaw": 0.07,
-            "left_hip_roll": -0.1,
-            "left_hip_pitch": 0.0,
-            "left_knee": 0.05,
-            "left_ankle": -0.1,
-            "neck_pitch": 0.1,
-            "head_pitch": 0.1,
-            "head_yaw": 0,
-            "head_roll": 0.1,
-            # "left_antenna": 0,
-            # "right_antenna": 0,
-            "right_hip_yaw": -0.15,
-            "right_hip_roll": 0.07,
-            "right_hip_pitch": 0.05,
-            "right_knee": -0.05,
-            "right_ankle": -0.08,
+            "left_hip_yaw" : -0.107,
+            "left_hip_roll" : 0.0010000000000000009,
+            "left_hip_pitch" : -0.118,
+            "left_knee" : 0.087,
+            "left_ankle" : -0.0010000000000000009,
+            "neck_pitch" : 0.567,
+            "head_pitch" : 0.0,
+            "head_yaw" : 0.154,
+            "head_roll" : 0,
+            "right_hip_yaw" : 0.041,
+            "right_hip_roll" : 0.086,
+            "right_hip_pitch" : -0.04100000000000001,
+            "right_knee" : 0.11699999999999999,
+            "right_ankle" : 0.0,
         }
 
     def set_pid(self, pid, joint_name):
         # TODO
         pass
 
-    def set_pid_all(self, pid):
-        # TODO WEIRD THINGS HERE
-        # If I set 32 manually, it works, but if it comes from a variable, it doesn't.
-        # sometimes i get :  ValueError: byte must be in range(0, 256)
-        # sometimes 32 becomes 76 somehow
-        # P = np.uint8(pid[0])
-        # I = np.uint8(pid[1])
-        # D = np.uint8(pid[2])
+    def set_kps(self, kp):
+        self.dxl_io.set_P_coefficient({id: kp for id in self.joints.values()})
+        
+    def set_kds(self, kd):
+        self.dxl_io.set_D_coefficient({id: kd for id in self.joints.values()})
 
-        self.dxl_io.set_P_coefficient({id: 32 for id in self.joints.values()})
+    def set_kis(self, ki):
         self.dxl_io.set_I_coefficient({id: 0 for id in self.joints.values()})
-        self.dxl_io.set_D_coefficient({id: 32 for id in self.joints.values()})
-
+    
     def get_pid_all(self):
         Ps = self.dxl_io.get_P_coefficient(self.joints.values())
         Is = self.dxl_io.get_I_coefficient(self.joints.values())
@@ -131,10 +123,7 @@ class HWI:
         time.sleep(1)
 
         for name, id in self.joints.items():
-            if "neck" in name or "head" in name:
-                self.dxl_io.set_acceleration({id: 32})
-            else:
-                self.dxl_io.set_acceleration({id: 254})
+            self.dxl_io.set_acceleration({id: 254})
 
     def turn_off(self):
         self.dxl_io.disable_torque(self.joints.values())
