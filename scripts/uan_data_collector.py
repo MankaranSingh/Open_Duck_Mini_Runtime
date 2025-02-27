@@ -20,7 +20,7 @@ def composite_wave(total_duration=10, dt=0.01, lower=-45, upper=45, degrees=True
     Generates a composite wave with fully randomized segments.
     Each segment is randomly chosen as one of several waveform types:
       'sine', 'square', 'gaussian', 'sine_squared', 'compound', 'cubic_triangle'.
-    Each segment’s frequency (or update interval), amplitude, and vertical offset are randomized.
+    Each segment's frequency (or update interval), amplitude, and vertical offset are randomized.
     
     For the 'sine_squared' type, the effective time (from the start of the segment) is clipped to 4 seconds.
     This ensures that the frequency (which is determined by (t*freq)**2) increases with time
