@@ -117,18 +117,8 @@ class HWI:
 
     def turn_on(self):
         self.dxl_io.enable_torque(self.joints.values())
-        self.dxl_io.set_mode({id: 0 for id in self.joints.values()})
-        # self.dxl_io.set_mode
-        self.dxl_io.set_acceleration({id: 16 for id in self.joints.values()})
-
-        time.sleep(1)
-
         self.set_position_all(self.init_pos)
-
-        time.sleep(1)
-
-        for name, id in self.joints.items():
-            self.dxl_io.set_acceleration({id: 254})
+        time.sleep(0.5)
 
     def turn_off(self):
         self.dxl_io.disable_torque(self.joints.values())
@@ -159,16 +149,14 @@ class HWI:
             pos - self.joints_offsets[joint]
             for joint, pos in zip(self.joints.keys(), present_positions)
         ]
-        return np.array(np.around(present_positions, 3))
+        return np.array(present_positions) 
 
-    def get_present_velocities(self, rad_s=True):
+    def get_present_velocities(self):
         """
-        Returns the present velocities in rad/s (default) or rev/min
+        Returns the present velocities in rad/s
         """
         # rev/min
         present_velocities = np.array(
             self.dxl_io.get_present_speed(self.joints.values())
         )
-        if rad_s:
-            present_velocities = (2 * np.pi * present_velocities) / 60  # rad/s
-        return np.array(np.around(present_velocities, 3))
+        return np.deg2rad(present_velocities)
