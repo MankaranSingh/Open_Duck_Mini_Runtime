@@ -166,6 +166,17 @@ for wave_count in range(N_WAVES):
 
     time.sleep(5)  # Wait for rosbag to start recording
     index = 0
+
+    # send a bit of zero messages for init
+    start_reset_time = rospy.Time.now().to_sec()
+    while rospy.Time.now().to_sec() - start_reset_time < 0.5 and not rospy.is_shutdown():
+        reset_msg = JointState()
+        reset_msg.header.stamp = rospy.Time.now()
+        reset_msg.name = TARGET_JOINTS
+        reset_msg.position = [0.0] * len(TARGET_JOINTS)
+        pub.publish(reset_msg)
+        rate.sleep()
+
     while not rospy.is_shutdown():
         msg = JointState()
         msg.header.stamp = rospy.Time.now()
