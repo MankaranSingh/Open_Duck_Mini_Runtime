@@ -50,9 +50,6 @@ def listen_for_controller_data():
 
     except bluetooth.btcommon.BluetoothError as e:
         print(f"Bluetooth error: {e}")
-    finally:
-        client_sock.close()
-        server_sock.close()
 
 if __name__ == "__main__":
     try:
