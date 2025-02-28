@@ -1,20 +1,91 @@
 {
   "configById": {
+    "Plot!8ka4f1": {
+      "paths": [
+        {
+          "timestampMethod": "headerStamp",
+          "value": "/imu/data.linear_acceleration.x",
+          "enabled": true
+        },
+        {
+          "timestampMethod": "headerStamp",
+          "value": "/imu/data.linear_acceleration.y",
+          "enabled": true
+        },
+        {
+          "timestampMethod": "headerStamp",
+          "value": "/imu/data.linear_acceleration.z",
+          "enabled": true
+        }
+      ],
+      "minYValue": -5,
+      "maxYValue": 5,
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "followingViewWidth": 30
+    },
+    "Plot!4h3xh1t": {
+      "paths": [
+        {
+          "timestampMethod": "headerStamp",
+          "value": "/current_joint_states.position[3]",
+          "enabled": true,
+          "showLine": true
+        },
+        {
+          "timestampMethod": "headerStamp",
+          "value": "/target_joint_states.position[0]",
+          "enabled": true
+        },
+        {
+          "timestampMethod": "headerStamp",
+          "value": "/current_joint_states.velocity[3]",
+          "enabled": false
+        },
+        {
+          "timestampMethod": "headerStamp",
+          "value": "/target_joint_states.position[4]",
+          "enabled": false
+        },
+        {
+          "timestampMethod": "headerStamp",
+          "value": "/current_joint_states.position[4]",
+          "enabled": false,
+          "color": "#ff618f"
+        }
+      ],
+      "minYValue": -1,
+      "maxYValue": 1,
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "followingViewWidth": 7.7638
+    },
     "3D!2t03v0n": {
       "cameraState": {
+        "distance": 0.8315598717135978,
         "perspective": true,
-        "distance": 1.388856803743327,
-        "phi": 95.88346136354565,
-        "thetaOffset": -97.68022500304696,
-        "targetOffset": [
-          -0.008951712057140413,
-          -0.16607222030106625,
-          -4.4566644273112585e-21
-        ],
+        "phi": 78.8017860260077,
         "target": [
           0,
           0,
           0
+        ],
+        "targetOffset": [
+          -0.008951712057140413,
+          -0.16607222030106625,
+          -4.4566644273112585e-21
         ],
         "targetOrientation": [
           0,
@@ -22,6 +93,7 @@
           0,
           1
         ],
+        "thetaOffset": -78.60188399657501,
         "fovy": 45,
         "near": 0.5,
         "far": 5000
@@ -37,7 +109,14 @@
         }
       },
       "transforms": {},
-      "topics": {},
+      "topics": {
+        "/move_base_simple/goal": {
+          "visible": false
+        },
+        "param:/robot_description": {
+          "visible": false
+        }
+      },
       "layers": {
         "7b10fec6-0ca2-47a9-8ecf-565c83be1cec": {
           "visible": true,
@@ -67,52 +146,26 @@
       },
       "imageMode": {}
     },
-    "Plot!3we7pao": {
-      "paths": [
-        {
-          "timestampMethod": "receiveTime",
-          "value": "/imu/data.angular_velocity.x",
-          "enabled": true
-        },
-        {
-          "timestampMethod": "receiveTime",
-          "value": "/imu/data.angular_velocity.y",
-          "enabled": true
-        },
-        {
-          "timestampMethod": "receiveTime",
-          "value": "/imu/data.angular_velocity.z",
-          "enabled": true
-        }
-      ],
-      "minYValue": -1,
-      "maxYValue": 1,
-      "showXAxisLabels": true,
-      "showYAxisLabels": true,
-      "showLegend": true,
-      "legendDisplay": "floating",
-      "showPlotValuesInLegend": false,
-      "isSynced": true,
-      "xAxisVal": "timestamp",
-      "sidebarDimension": 240,
-      "foxglovePanelTitle": "Gyro",
-      "followingViewWidth": 60
-    },
     "Plot!fce6wx": {
       "paths": [
         {
-          "timestampMethod": "receiveTime",
+          "timestampMethod": "headerStamp",
           "value": "/imu/data.orientation.x",
           "enabled": true
         },
         {
-          "timestampMethod": "receiveTime",
+          "timestampMethod": "headerStamp",
           "value": "/imu/data.orientation.y",
           "enabled": true
         },
         {
-          "timestampMethod": "receiveTime",
+          "timestampMethod": "headerStamp",
           "value": "/imu/data.orientation.z",
+          "enabled": true
+        },
+        {
+          "timestampMethod": "headerStamp",
+          "value": "/imu/data.orientation.w",
           "enabled": true
         }
       ],
@@ -126,7 +179,7 @@
       "isSynced": true,
       "xAxisVal": "timestamp",
       "sidebarDimension": 240,
-      "followingViewWidth": 60
+      "followingViewWidth": 30
     },
     "Plot!qxk2s1": {
       "paths": [
@@ -158,6 +211,47 @@
       "followingViewWidth": 10,
       "minYValue": -2,
       "maxYValue": 2
+    },
+    "Plot!3we7pao": {
+      "paths": [
+        {
+          "timestampMethod": "headerStamp",
+          "value": "/imu/data.angular_velocity.x",
+          "enabled": true
+        },
+        {
+          "timestampMethod": "headerStamp",
+          "value": "/imu/data.angular_velocity.y",
+          "enabled": true
+        },
+        {
+          "timestampMethod": "headerStamp",
+          "value": "/imu/data.angular_velocity.z",
+          "enabled": true
+        }
+      ],
+      "minYValue": -4,
+      "maxYValue": 4,
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "Gyro",
+      "followingViewWidth": 30
+    },
+    "StateTransitions!1x5mow": {
+      "paths": [
+        {
+          "value": "/feet_switch.data",
+          "timestampMethod": "receiveTime",
+          "label": "feet switches"
+        }
+      ],
+      "isSynced": true
     }
   },
   "globalVariables": {},
@@ -168,15 +262,30 @@
   "layout": {
     "direction": "row",
     "first": {
-      "first": {
-        "first": "3D!2t03v0n",
-        "second": "Plot!3we7pao",
-        "direction": "row"
-      },
-      "second": "Plot!fce6wx",
+      "first": "Plot!8ka4f1",
+      "second": "Plot!4h3xh1t",
       "direction": "column"
     },
-    "second": "Plot!qxk2s1",
-    "splitPercentage": 57.84453609053417
+    "second": {
+      "direction": "row",
+      "first": {
+        "first": "3D!2t03v0n",
+        "second": "Plot!fce6wx",
+        "direction": "column",
+        "splitPercentage": 48.99683210137275
+      },
+      "second": {
+        "first": {
+          "first": "Plot!qxk2s1",
+          "second": "StateTransitions!1x5mow",
+          "direction": "column"
+        },
+        "second": "Plot!3we7pao",
+        "direction": "column",
+        "splitPercentage": 48.99683210137275
+      },
+      "splitPercentage": 47.71221390457948
+    },
+    "splitPercentage": 31.700643042823916
   }
 }
