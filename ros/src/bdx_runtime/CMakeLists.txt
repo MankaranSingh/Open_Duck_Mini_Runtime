@@ -15,6 +15,7 @@ catkin_install_python(PROGRAMS
   src/imu_node.py
   src/joystick_node.py
   src/motor_control_node.py
+  src/feet_switch_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
