@@ -1,9 +1,10 @@
 import rosbag
 import numpy as np
 import argparse
+import os
 from scipy.interpolate import interp1d
 
-def extract_and_interpolate(bag_file, dt):
+def extract_and_interpolate(bag_file, target_joint, dt):
     target_times = []
     target_positions = []
     current_times = []
@@ -14,11 +15,11 @@ def extract_and_interpolate(bag_file, dt):
         for topic, msg, t in bag.read_messages():
             if topic == "/target_joint_states":
                 target_times.append(msg.header.stamp.to_sec())
-                target_positions.append(msg.position)
+                target_positions.append(msg.position[0])
             elif topic == "/current_joint_states":
                 current_times.append(msg.header.stamp.to_sec())
-                current_positions.append(msg.position)
-                current_velocities.append(msg.velocity)
+                current_positions.append(msg.position[target_joint])
+                current_velocities.append(msg.velocity[target_joint])
     
     target_times = np.array(target_times)
     target_positions = np.array(target_positions)
@@ -39,11 +40,25 @@ def extract_and_interpolate(bag_file, dt):
         "actual_positions": np.array(current_interp),
         "actual_velocities": np.array(velocity_interp)
     }
-    np.save(args.bag_file.replace(".bag", ".npy"), data)
+    
+    return data
+
+def process_bag_files(directory, target_joint, dt=0.01):
+    npy_dir = os.path.join(directory, "npy")
+    os.makedirs(npy_dir, exist_ok=True)
+    
+    for file in os.listdir(directory):
+        if file.endswith(".bag"):
+            bag_path = os.path.join(directory, file)
+            data = extract_and_interpolate(bag_path, target_joint, dt)
+            npy_path = os.path.join(npy_dir, file.replace(".bag", ".npy"))
+            np.save(npy_path, data)
+            print(f"Saved {npy_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("bag_file", type=str, help="Path to the ROS1 bag file")
+    parser.add_argument("directory", type=str, help="Path to the directory containing ROS1 bag files")
+    parser.add_argument("target_joint", type=int, help="target joint for which data was collected")
     args = parser.parse_args()
     
-    data = extract_and_interpolate(args.bag_file, dt=0.01)
+    process_bag_files(args.directory, args.target_joint, dt=0.01)
