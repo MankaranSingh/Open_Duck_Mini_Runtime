@@ -13,7 +13,7 @@ class WalkPolicyNode:
         rospy.init_node('walk_policy_node')
         
         # Load the ONNX model
-        self.model = ort.InferenceSession('/path/to/your/model.onnx')
+        self.model = ort.InferenceSession('../assets/policy.onnx')
         self.rate = rospy.Rate(50)  # 50 Hz
         
         # Initialize subscribers
@@ -70,7 +70,8 @@ class WalkPolicyNode:
 
     def run_policy(self):
 
-        while None in [self.cmd_vel, self.feet_contact, self.joint_positions, self.joint_velocities, self.projected_gravity, self.angular_velocity]:
+        while any(x is None for x in [self.cmd_vel, self.feet_contact, self.joint_positions, 
+                              self.joint_velocities, self.projected_gravity, self.angular_velocity]):
             rospy.loginfo("Waiting for all policy inputs to be available..")
             time.sleep(0.5)
 
@@ -82,19 +83,19 @@ class WalkPolicyNode:
                                          self.angular_velocity, 
                                          self.feet_contact])
 
-            self.obs_history[1:, :] = self.obs_history[:-1, :].clone()
+            self.obs_history[1:, :] = self.obs_history[:-1, :].copy()
             self.obs_history[0, :] = obs 
 
-            input = np.concatenate([self.obs_history.flatten(), self.action_history.flatten(), self.cmd_vel])
+            input = np.concatenate([self.obs_history.flatten(), self.action_history.flatten(), self.cmd_vel]).reshape(1, -1)
                         
             # Run the model
-            outputs = self.model.run(None, {'obs': input})
+            outputs = self.model.run(None, {'obs': input.astype(np.float32)})  # Run the model
             
             # Extract the target joint states
             actions = outputs[0].flatten()
             actions[self.mask_joint_idx] = 0.0
 
-            self.action_history[1:, :] = self.action_history[:-1, :].clone()
+            self.action_history[1:, :] = self.action_history[:-1, :].copy()
             self.action_history[0, :] = actions 
             
             # Publish the target joint states
