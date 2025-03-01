@@ -16,8 +16,10 @@ class JointController:
         self.hwi.turn_on()
         self.target_positions = self.hwi.init_pos.copy()  # start with the hardware's init positions
 
-        self.dummy_joints = ["right_antenna", "left_antenna"] # Dummy joints for urdf viz. Not controlled by hardware.
-        self.joint_names = list(self.hwi.joints.keys()) + self.dummy_joints
+        self.dummy_joints = ["left_antenna", "right_antenna"] # Dummy joints for urdf viz. Not controlled by hardware.
+        self.dummy_joint_values = [0.0, 0.0]
+        self.dummy_joint_insert_idx = 9
+        self.joint_names = list(self.hwi.joints.keys()).insert(self.dummy_joint_insert_idx, self.dummy_joints)
 
         # Publisher for current joint states
         self.pub = rospy.Publisher("/current_joint_states", JointState, queue_size=10)
@@ -41,6 +43,8 @@ class JointController:
         Update target positions for joints. Only those joints mentioned in the incoming message are updated.
         """
         for name, pos in zip(msg.name, msg.position):
+            if name in self.dummy_joints:
+                continue
             if name in self.target_positions:
                 self.target_positions[name] = pos
             else:
@@ -125,9 +129,9 @@ class JointController:
             msg.velocity = velocities.tolist() if hasattr(velocities, "tolist") else list(velocities)
             #msg.effort   = voltages.tolist()   if hasattr(voltages, "tolist")   else list(voltages)
 
-            msg.position += [0.0] * len(self.dummy_joints)
-            msg.velocity += [0.0] * len(self.dummy_joints)
-            #msg.effort   += [0.0] * len(self.dummy_joints) 
+            msg.position.insert(self.dummy_joint_insert_idx, self.dummy_joint_values)
+            msg.velocity.insert(self.dummy_joint_insert_idx, self.dummy_joint_values)
+            #msg.effort.insert(self.dummy_joint_insert_idx, self.dummy_joint_values)
 
             self.pub.publish(msg)
             self.rate.sleep()
