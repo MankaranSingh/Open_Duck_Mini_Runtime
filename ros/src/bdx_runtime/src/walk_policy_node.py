@@ -2,6 +2,7 @@ import rospy
 import onnxruntime as ort
 import numpy as np
 import time
+from collections import deque
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Imu
@@ -49,6 +50,9 @@ class WalkPolicyNode:
         self.obs_history_length = 2
         self.action_history_length = 2
         self.power_scale = 1.5
+        self.lin_vel_x_range = [-0.5, 0.5]
+        self.lin_vel_y_range = [-0.4, 0.4]
+        self.yaw_range = [-0.8, 0.8]
 
         self.joint_names = [
             "left_hip_yaw", "left_hip_roll", "left_hip_pitch", 
@@ -107,10 +111,17 @@ class WalkPolicyNode:
         self.projected_gravity = quat_rotate_inverse(quat, [0, 0, -1.0])
         self.angular_velocity = np.array([msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z])
 
+    def scale_cmd_vel(self, linear_x, linear_y, angular_z):
+        """Scale cmd_vel values to their respective ranges."""
+        lin_vel_x = np.clip(linear_x, -1, 1) * (self.lin_vel_x_range[1] - self.lin_vel_x_range[0]) / 2 + (self.lin_vel_x_range[1] + self.lin_vel_x_range[0]) / 2
+        lin_vel_y = np.clip(linear_y, -1, 1) * (self.lin_vel_y_range[1] - self.lin_vel_y_range[0]) / 2 + (self.lin_vel_y_range[1] + self.lin_vel_y_range[0]) / 2
+        yaw = np.clip(angular_z, -1, 1) * (self.yaw_range[1] - self.yaw_range[0]) / 2 + (self.yaw_range[1] + self.yaw_range[0]) / 2
+        return np.array([lin_vel_x, lin_vel_y, yaw * self.angular_vel_scale])
+
     def cmd_vel_callback(self, msg):
         current_time = rospy.Time.now().to_sec()
         self.msg_times['cmd_vel'].append(current_time)
-        self.cmd_vel = np.array([msg.linear.x, msg.linear.y, msg.angular.z * self.angular_vel_scale])
+        self.cmd_vel = self.scale_cmd_vel(msg.linear.x, msg.linear.y, msg.angular.z)
 
     def feet_contact_callback(self, msg):
         current_time = rospy.Time.now().to_sec()
