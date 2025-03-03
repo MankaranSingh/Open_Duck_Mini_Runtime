@@ -16,10 +16,12 @@ class JointController:
         self.hwi.turn_on()
         self.target_positions = self.hwi.init_pos.copy()  # start with the hardware's init positions
 
-        self.dummy_joints = ["left_antenna", "right_antenna"] # Dummy joints for urdf viz. Not controlled by hardware.
+        self.dummy_joints = ["left_antenna", "right_antenna"]  # Dummy joints for urdf viz. Not controlled by hardware.
         self.dummy_joint_values = [0.0, 0.0]
         self.dummy_joint_insert_idx = 9
-        self.joint_names = list(self.hwi.joints.keys()).insert(self.dummy_joint_insert_idx, self.dummy_joints)
+        joint_names = list(self.hwi.joints.keys())
+        joint_names[self.dummy_joint_insert_idx:self.dummy_joint_insert_idx] = self.dummy_joints
+        self.joint_names = joint_names
 
         # Publisher for current joint states
         self.pub = rospy.Publisher("/current_joint_states", JointState, queue_size=10)
@@ -37,6 +39,9 @@ class JointController:
 
         self.rate = rospy.Rate(100)  # 10 Hz update rate
         rospy.loginfo("Joint Controller initialized.")
+
+        self.prev_positions = self.hwi.get_present_positions()
+        self.prev_time = rospy.Time.now()
 
     def target_callback(self, msg):
         """
@@ -122,16 +127,25 @@ class JointController:
             msg.name = self.joint_names
 
             positions = self.hwi.get_present_positions()
-            velocities = self.hwi.get_present_velocities()
+            current_time = rospy.Time.now()
+            time_diff = (current_time - self.prev_time).to_sec()
+
+            # Compute velocities using previous positions
+            velocities = (positions - self.prev_positions) / time_diff
+
+            # Update previous positions and time
+            self.prev_positions = positions
+            self.prev_time = current_time
+
             #voltages = self.hwi.get_present_voltages()
 
-            msg.position = positions.tolist() if hasattr(positions, "tolist") else list(positions)
-            msg.velocity = velocities.tolist() if hasattr(velocities, "tolist") else list(velocities)
-            #msg.effort   = voltages.tolist()   if hasattr(voltages, "tolist")   else list(voltages)
+            msg.position = positions.tolist()
+            msg.velocity = velocities.tolist()
+            #msg.effort   = voltages.tolist()
 
-            msg.position.insert(self.dummy_joint_insert_idx, self.dummy_joint_values)
-            msg.velocity.insert(self.dummy_joint_insert_idx, self.dummy_joint_values)
-            #msg.effort.insert(self.dummy_joint_insert_idx, self.dummy_joint_values)
+            msg.position[self.dummy_joint_insert_idx:self.dummy_joint_insert_idx] = self.dummy_joint_values
+            msg.velocity[self.dummy_joint_insert_idx:self.dummy_joint_insert_idx] = self.dummy_joint_values
+            #msg.effort[self.dummy_joint_insert_idx:self.dummy_joint_insert_idx] = self.dummy_joint_values
 
             self.pub.publish(msg)
             self.rate.sleep()
