@@ -8,13 +8,17 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Imu
 from std_msgs.msg import Int32
 from mini_bdx_runtime.rl_utils import quat_rotate_inverse
+import os
 
 class WalkPolicyNode:
     def __init__(self):
         rospy.init_node('walk_policy_node')
 
         # Load the ONNX model
-        self.model = ort.InferenceSession('../assets/policy.onnx')
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Construct the model path relative to the current file
+        model_path = os.path.join(current_dir, '../assets/policy.onnx')
+        self.model = ort.InferenceSession(model_path)
         self.rate = rospy.Rate(50)  # 50 Hz
 
         # Define the expected publishing rates (in Hz) for each topic.
