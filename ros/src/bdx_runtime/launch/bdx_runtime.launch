@@ -3,6 +3,7 @@
   <node pkg="bdx_runtime" type="joystick_node.py" name="joystick_node" output="screen" respawn="true" respawn_delay="0.5" />
   <node pkg="bdx_runtime" type="motor_control_node.py" name="motor_control_node" output="screen" />
   <node pkg="bdx_runtime" type="feet_switch_node.py" name="feet_switch_node" output="screen" />
+  <node pkg="bdx_runtime" type="walk_policy_node.py" name="walk_policy_node" output="screen" />
 
   <!-- Launch robot_state_publisher from its package -->
   <param name="robot_description" command="cat $(find bdx_runtime)/urdf/mini2_bdx.urdf" />

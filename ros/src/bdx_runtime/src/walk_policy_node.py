@@ -24,8 +24,8 @@ class WalkPolicyNode:
         # Define the expected publishing rates (in Hz) for each topic.
         self.expected_rates = {
             'cmd_vel': 50,       # cmd_vel is expected at 50 Hz
-            'feet_contact': 100, # Other topics are expected at 100 Hz
-            'joint_states': 100,
+            'feet_contact': 50, # Other topics are expected at 50 Hz
+            'joint_states': 50,
             'imu': 100
         }
         # Acceptable rate threshold as a fraction of the expected rate.
