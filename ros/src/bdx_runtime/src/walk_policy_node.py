@@ -161,8 +161,9 @@ class WalkPolicyNode:
             obs = np.concatenate([self.projected_gravity,
                                   self.joint_positions * self.joint_pos_scale,
                                   self.joint_velocities * self.joint_vel_scale,
-                                  self.angular_velocity,
-                                  self.feet_contact])
+                                  #self.angular_velocity,
+                                  #self.feet_contact,
+                                  ])
             
             # Update observation history (shift and insert new observation)
             self.obs_history[1:, :] = self.obs_history[:-1, :].copy()
