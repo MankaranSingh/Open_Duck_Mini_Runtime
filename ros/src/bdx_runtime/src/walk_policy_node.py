@@ -62,9 +62,9 @@ class WalkPolicyNode:
         self.obs_history_length = 2
         self.action_history_length = 2
         self.power_scale = 1.5
-        self.lin_vel_x_range = [-0.5, 0.5]
-        self.lin_vel_y_range = [-0.4, 0.4]
-        self.yaw_range = [-0.8, 0.8]
+        self.lin_vel_x_range = [-0.3, 0.3]
+        self.lin_vel_y_range = [-0.3, 0.3]
+        self.yaw_range = [-0.3, 0.3]
 
         self.joint_names = [
             "left_hip_yaw", "left_hip_roll", "left_hip_pitch", 
