@@ -37,7 +37,7 @@ class JointController:
         self.s_set_kps = rospy.Service("set_kps", Trigger, self.handle_set_kps)
         self.s_set_kds = rospy.Service("set_kds", Trigger, self.handle_set_kds)
 
-        self.rate = rospy.Rate(100)  # 10 Hz update rate
+        self.rate = rospy.Rate(50)  # 10 Hz update rate
         rospy.loginfo("Joint Controller initialized.")
 
     def target_callback(self, msg):
