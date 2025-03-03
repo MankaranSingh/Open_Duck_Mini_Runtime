@@ -7,10 +7,10 @@ from pypot.feetech import FeetechSTS3215IO
 
 
 class HWI:
-    def __init__(self, usb_port="/dev/ttyACM0", baudrate=3000000):
+    def __init__(self, usb_port="/dev/ttyACM0", baudrate=1_000_000):
         self.dxl_io = FeetechSTS3215IO(
             usb_port,
-            baudrate=1000000,
+            baudrate=baudrate,
             use_sync_read=True,
         )
         self.joints = {
