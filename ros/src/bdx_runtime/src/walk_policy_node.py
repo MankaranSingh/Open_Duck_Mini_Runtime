@@ -1,6 +1,6 @@
 import rospy
 import onnxruntime as ort
-import numpy np
+import numpy as np
 import time
 from collections import deque
 from sensor_msgs.msg import JointState
