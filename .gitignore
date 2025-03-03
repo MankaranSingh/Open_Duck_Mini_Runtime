@@ -4,3 +4,4 @@ mini_bdx_runtime.egg-info/
 build
 devel
 .catkin_workspace
+motions

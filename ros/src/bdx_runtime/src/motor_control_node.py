@@ -5,6 +5,7 @@ from sensor_msgs.msg import JointState
 import numpy as np
 from std_srvs.srv import Trigger, TriggerResponse
 from mini_bdx_runtime.hwi_feetech_pypot import HWI 
+import threading
 
 
 class JointController:
@@ -37,23 +38,33 @@ class JointController:
         self.s_set_kps = rospy.Service("set_kps", Trigger, self.handle_set_kps)
         self.s_set_kds = rospy.Service("set_kds", Trigger, self.handle_set_kds)
 
-        self.rate = rospy.Rate(100)  # 10 Hz update rate
+        self.rate_write = rospy.Rate(100)  # 100 Hz update rate
+        self.rate_read = rospy.Rate(100)  # 100 Hz update rate
         rospy.loginfo("Joint Controller initialized.")
 
-        self.prev_positions = self.hwi.get_present_positions()
-        self.prev_time = rospy.Time.now()
+        self.position_lock = threading.Lock()
+        self.running = True
+        self.position_thread = threading.Thread(target=self.update_positions)
+        self.position_thread.start()
+
+    def update_positions(self):
+        while self.running and not rospy.is_shutdown():
+            with self.position_lock:
+                self.hwi.set_position_all(self.target_positions)
+            self.rate_write.sleep()
 
     def target_callback(self, msg):
         """
         Update target positions for joints. Only those joints mentioned in the incoming message are updated.
         """
-        for name, pos in zip(msg.name, msg.position):
-            if name in self.dummy_joints:
-                continue
-            if name in self.target_positions:
-                self.target_positions[name] = pos
-            else:
-                rospy.logwarn("Received target for unknown joint: %s", name)
+        with self.position_lock:
+            for name, pos in zip(msg.name, msg.position):
+                if name in self.dummy_joints:
+                    continue
+                if name in self.target_positions:
+                    self.target_positions[name] = pos
+                else:
+                    rospy.logwarn("Received target for unknown joint: %s", name)
 
     def handle_turn_on(self, req):
         """
@@ -115,40 +126,33 @@ class JointController:
 
     def run(self):
         # Ensure hardware is safely turned off on shutdown.
-        rospy.on_shutdown(self.hwi.turn_off)
+        rospy.on_shutdown(self.shutdown)
 
         while not rospy.is_shutdown():
-            # Apply target positions to the hardware
-            self.hwi.set_position_all(self.target_positions)
-
             # Prepare and publish the JointState message with current data.
             msg = JointState()
             msg.header.stamp = rospy.Time.now()
             msg.name = self.joint_names
 
             positions = self.hwi.get_present_positions()
-            current_time = rospy.Time.now()
-            time_diff = (current_time - self.prev_time).to_sec()
-
-            # Compute velocities using previous positions
-            velocities = (positions - self.prev_positions) / time_diff
-
-            # Update previous positions and time
-            self.prev_positions = positions
-            self.prev_time = current_time
-
+            velocities = self.hwi.get_present_velocities()
             #voltages = self.hwi.get_present_voltages()
 
             msg.position = positions.tolist()
             msg.velocity = velocities.tolist()
-            #msg.effort   = voltages.tolist()
+            #msg.effort   = voltages.tolist()  
 
             msg.position[self.dummy_joint_insert_idx:self.dummy_joint_insert_idx] = self.dummy_joint_values
             msg.velocity[self.dummy_joint_insert_idx:self.dummy_joint_insert_idx] = self.dummy_joint_values
             #msg.effort[self.dummy_joint_insert_idx:self.dummy_joint_insert_idx] = self.dummy_joint_values
 
             self.pub.publish(msg)
-            self.rate.sleep()
+            self.rate_read.sleep()
+
+    def shutdown(self):
+        self.running = False
+        self.position_thread.join()
+        self.hwi.turn_off()
 
 if __name__ == "__main__":
     try:
