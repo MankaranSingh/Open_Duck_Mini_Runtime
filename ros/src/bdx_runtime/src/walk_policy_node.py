@@ -31,6 +31,14 @@ class WalkPolicyNode:
         # Acceptable rate threshold as a fraction of the expected rate.
         self.acceptable_fraction = 0.8
 
+        window_size = 10  # Number of recent messages to average over
+        self.msg_times = {
+            'cmd_vel': deque(maxlen=window_size),
+            'feet_contact': deque(maxlen=window_size),
+            'joint_states': deque(maxlen=window_size),
+            'imu': deque(maxlen=window_size)
+        }
+
         # Initialize subscribers
         self.cmd_vel_sub = rospy.Subscriber('/cmd_vel', Twist, self.cmd_vel_callback)
         self.feet_contact_sub = rospy.Subscriber('/feet_switch', Int32, self.feet_contact_callback)
@@ -69,16 +77,7 @@ class WalkPolicyNode:
         self.mask_joint_idx = np.array([self.joint_names.index(joint) for joint in self.mask_joints])
         
         self.obs_history = np.zeros((self.obs_history_length, 40))
-        self.action_history = np.zeros((self.action_history_length, len(self.joint_names)))
-
-        # Use a deque to store the last N timestamps for each topic
-        window_size = 10  # Number of recent messages to average over
-        self.msg_times = {
-            'cmd_vel': deque(maxlen=window_size),
-            'feet_contact': deque(maxlen=window_size),
-            'joint_states': deque(maxlen=window_size),
-            'imu': deque(maxlen=window_size)
-        }
+        self.action_history = np.zeros((self.action_history_length, len(self.joint_names)))        
 
         # For rate logging control (log once per second)
         self.last_rate_log_time = rospy.Time.now().to_sec()
