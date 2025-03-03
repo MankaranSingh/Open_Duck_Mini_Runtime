@@ -6,7 +6,7 @@ from geometry_msgs.msg import Twist
 
 def listen_for_controller_data():
     rospy.init_node("bluetooth_joystick_receiver", anonymous=True)
-    pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
+    pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
     rate = rospy.Rate(50)  # 50 Hz
 
     server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)

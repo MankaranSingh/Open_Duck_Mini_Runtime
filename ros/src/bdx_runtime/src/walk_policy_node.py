@@ -1,6 +1,6 @@
 import rospy
 import onnxruntime as ort
-import numpy as np
+import numpy np
 import time
 from collections import deque
 from sensor_msgs.msg import JointState
@@ -46,7 +46,7 @@ class WalkPolicyNode:
         self.imu_sub = rospy.Subscriber('/imu/data', Imu, self.imu_callback)
 
         # Initialize publisher
-        self.target_joint_states_pub = rospy.Publisher('/target_joint_states', JointState, queue_size=10)
+        self.target_joint_states_pub = rospy.Publisher('/target_joint_states', JointState, queue_size=1)
 
         # Initialize variables to store inputs
         self.cmd_vel = None
@@ -183,6 +183,7 @@ class WalkPolicyNode:
             
             # Publish the target joint states
             joint_state_msg = JointState()
+            joint_state_msg.header.stamp = rospy.Time.now()  # Add timestamp
             joint_state_msg.name = self.joint_names
             joint_state_msg.position = (actions * self.power_scale).tolist()
             self.target_joint_states_pub.publish(joint_state_msg)

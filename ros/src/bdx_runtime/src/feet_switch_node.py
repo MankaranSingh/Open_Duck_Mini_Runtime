@@ -14,7 +14,7 @@ def setup_gpio():
 
 def feet_switch_publisher():
     rospy.init_node('feet_switch_node', anonymous=True)
-    feet_pub = rospy.Publisher('/feet_switch', Int32, queue_size=10)
+    feet_pub = rospy.Publisher('/feet_switch', Int32, queue_size=1)
     rate = rospy.Rate(50)  # 100 Hz
     
     while not rospy.is_shutdown():

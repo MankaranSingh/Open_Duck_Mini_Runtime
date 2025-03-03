@@ -24,7 +24,7 @@ class JointController:
         self.joint_names = joint_names
 
         # Publisher for current joint states
-        self.pub = rospy.Publisher("/current_joint_states", JointState, queue_size=10)
+        self.pub = rospy.Publisher("/current_joint_states", JointState, queue_size=1)
         # Subscriber for target joint states
         rospy.Subscriber("/target_joint_states", JointState, self.target_callback)
 
@@ -37,7 +37,7 @@ class JointController:
         self.s_set_kps = rospy.Service("set_kps", Trigger, self.handle_set_kps)
         self.s_set_kds = rospy.Service("set_kds", Trigger, self.handle_set_kds)
 
-        self.rate = rospy.Rate(50)  # 10 Hz update rate
+        self.rate = rospy.Rate(100)  # 10 Hz update rate
         rospy.loginfo("Joint Controller initialized.")
 
     def target_callback(self, msg):

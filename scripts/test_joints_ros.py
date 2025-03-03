@@ -12,7 +12,7 @@ args = parser.parse_args()
 
 # Initialize ROS node
 rospy.init_node("manual_joint_publisher")
-pub = rospy.Publisher("/target_joint_states", JointState, queue_size=10)
+pub = rospy.Publisher("/target_joint_states", JointState, queue_size=1)
 
 rate = rospy.Rate(100)  # 100 Hz update rate
 

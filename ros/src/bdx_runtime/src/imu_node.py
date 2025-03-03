@@ -18,7 +18,7 @@ sensor.mode = adafruit_bno055.IMUPLUS_MODE
 # Initialize ROS node and publisher
 rospy.init_node("bno055_imu_publisher")
 imu_pub = rospy.Publisher("/imu/data", Imu, queue_size=1)
-rate = rospy.Rate(100)
+rate = rospy.Rate(50)
 
 # Define fixed rotation for axis re-mapping: -90° about z
 # (Re-maps sensor frame: x=right, y=forward, z=up to desired frame: x=forward, y=left, z=up)

@@ -137,7 +137,7 @@ def composite_wave(total_duration=10, dt=0.01, lower=-45, upper=45, degrees=True
 
 # Initialize ROS node
 rospy.init_node("uan_data_collector")
-pub = rospy.Publisher("/target_joint_states", JointState, queue_size=10)
+pub = rospy.Publisher("/target_joint_states", JointState, queue_size=1)
 rate = rospy.Rate(PUBLISH_RATE)
 
 for wave_count in range(N_WAVES):
