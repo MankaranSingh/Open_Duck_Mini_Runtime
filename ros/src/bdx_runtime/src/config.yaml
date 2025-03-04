@@ -1,0 +1,58 @@
+# Control loop settings
+control_rate_hz: 50
+
+# Hardware connection settings
+usb_port: "/dev/ttyACM0"
+
+# Bluetooth settings
+bluetooth:
+  enabled: true
+  port: 1  # RFCOMM port (optional)
+
+# Hardware control settings
+hardware:
+  enable_motors: true
+  kp: 32.0  # Proportional gain
+  kd: 0.0   # Derivative gain
+
+# Policy parameters
+policy_params:
+  joint_pos_scale: 1.0
+  joint_vel_scale: 1.0
+  angular_vel_scale: 0.25
+  power_scale: 1.5
+  obs_history_length: 2
+  action_history_length: 2
+
+# Command velocity limits
+cmd_vel_limits:
+  linear_x: [-0.3, 0.3]
+  linear_y: [-0.3, 0.3]
+  angular_z: [-0.3, 0.3]
+
+# Model settings
+model:
+  path: "ros/src/bdx_runtime/assets/policy.onnx"
+
+# Sensor settings
+sensors:
+  imu:
+    i2c_bus: 3
+    pitch_offset: 0.13
+  feet:
+    left_pin: 6
+    right_pin: 5
+
+# Joint masking
+mask_joints:
+  - "neck_pitch"
+  - "head_pitch"
+  - "head_yaw"
+  - "head_roll"
+  - "left_antenna"
+  - "right_antenna"
+
+# Debug settings
+debug:
+  log_interval: 5.0  # How often to print diagnostic info (seconds)
+  verbose: false

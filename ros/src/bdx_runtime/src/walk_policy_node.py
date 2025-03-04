@@ -169,7 +169,8 @@ class WalkPolicyNode:
             self.obs_history[1:, :] = self.obs_history[:-1, :].copy()
             self.obs_history[0, :] = obs
 
-            input_data = np.concatenate([self.obs_history.flatten(), self.action_history.flatten(), self.cmd_vel]).reshape(1, -1)
+            combined = np.concatenate([self.obs_history, self.action_history], axis=-1)
+            input_data = np.concatenate([combined.flatten(), self.cmd_vel]).reshape(1, -1)
 
             # Run the model
             outputs = self.model.run(None, {'obs': input_data.astype(np.float32)})
