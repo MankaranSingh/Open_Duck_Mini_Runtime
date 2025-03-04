@@ -138,24 +138,20 @@ class WalkPolicy:
         self.hwi = HWI(usb_port=usb_port)
         
         hardware_config = self.config.get("hardware", {})
-        if hardware_config.get("enable_motors", True):
-            self.hwi.turn_on()
-            
-            # Set KP and KD values from config
-            kp_value = hardware_config.get("kp", 32.0)
-            kd_value = hardware_config.get("kd", 0.0)
-            
-            kps_list = [kp_value] * len(self.hwi.joints)
-            kds_list = [kd_value] * len(self.hwi.joints)
-            
-            # Uncomment if your hardware supports setting these values
-            # self.hwi.set_kps(kps_list)
-            # self.hwi.set_kds(kds_list)
-            
-            print(f"Motors initialized with KP={kp_value}, KD={kd_value}")
-        else:
-            print("Motors disabled")
-            
+        self.hwi.turn_on()
+        
+        # Set KP and KD values from config
+        kp_value = hardware_config.get("kp", 32.0)
+        kd_value = hardware_config.get("kd", 0.0)
+        
+        kps_list = [kp_value] * len(self.hwi.joints)
+        kds_list = [kd_value] * len(self.hwi.joints)
+        
+        # Uncomment if your hardware supports setting these values
+        # self.hwi.set_kps(kps_list)
+        # self.hwi.set_kds(kds_list)
+        
+        print(f"Motors initialized with KP={kp_value}, KD={kd_value}")            
         # Initialize target positions with hardware's init positions
         self.target_positions = self.hwi.init_pos.copy()
 
