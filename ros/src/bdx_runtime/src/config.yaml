@@ -11,7 +11,7 @@ bluetooth:
 
 # Hardware control settings
 hardware:
-  enable_motors: true
+  enable_motors: false
   kp: 32.0  # Proportional gain
   kd: 0.0   # Derivative gain
 
@@ -23,6 +23,7 @@ policy_params:
   power_scale: 1.5
   obs_history_length: 2
   action_history_length: 2
+  obs_dim: 35
 
 # Command velocity limits
 cmd_vel_limits:

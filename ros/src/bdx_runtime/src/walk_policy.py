@@ -62,7 +62,7 @@ class WalkPolicy:
         self.angular_velocity = np.zeros(3)
         
         # Initialize histories from config
-        self.obs_history = np.zeros((self.obs_history_length, 40))  # Adjust size as needed
+        self.obs_history = np.zeros((self.obs_history_length, self.config["policy_params"]["obs_dim"]))
         self.action_history = np.zeros((self.action_history_length, len(self.joint_names)))
         
         # Setup control loop timing
