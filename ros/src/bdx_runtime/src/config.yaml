@@ -33,7 +33,7 @@ cmd_vel_limits:
 
 # Model settings
 model:
-  path: "ros/src/bdx_runtime/assets/policy.onnx"
+  path: "../assets/policy.onnx"
 
 # Sensor settings
 sensors:
