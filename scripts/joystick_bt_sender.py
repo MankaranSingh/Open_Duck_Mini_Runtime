@@ -1,4 +1,5 @@
 import bluetooth
+from bluetooth import Protocols
 import pygame
 import time
 import math
@@ -44,7 +45,7 @@ def init_joystick():
     return handle
 
 def send_controller_data(target_mac):
-    sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+    sock = bluetooth.BluetoothSocket(Protocols.RFCOMM)
     joystick = init_joystick()
 
     # Create filters for each axis
