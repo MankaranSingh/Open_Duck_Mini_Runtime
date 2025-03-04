@@ -230,28 +230,25 @@ class WalkPolicy:
 
     def read_imu_data(self):
         """Read data from IMU sensor"""
-        try:
-            if self.imu_sensor:
-                # Get sensor quaternion (w, x, y, z format)
-                qw, qx, qy, qz = self.imu_sensor.quaternion
-                # Convert to (x, y, z, w) format
-                q_sensor_raw = [qx, qy, qz, qw]
-                
-                # Apply fixed rotation
-                q_corr = quaternion_multiply(self.q_fixed, q_sensor_raw)
-                q_corr = quaternion_multiply(q_corr, quaternion_inverse(self.q_fixed))
-                
-                # Apply pitch correction
-                q_final = quaternion_multiply(self.q_pitch_corr, q_corr)
-                
-                # Extract gravity vector using the quaternion
-                self.projected_gravity = quat_rotate_inverse(q_final, [0, 0, -1.0])
-                
-                # Get gyro data and apply rotation
-                gyro = np.dot(self.R_total, self.imu_sensor.gyro)
-                self.angular_velocity = gyro
-        except Exception as e:
-            print(f"Error reading IMU: {e}")
+        if self.imu_sensor:
+            # Get sensor quaternion (w, x, y, z format)
+            qw, qx, qy, qz = self.imu_sensor.quaternion
+            # Convert to (x, y, z, w) format
+            q_sensor_raw = [qx, qy, qz, qw]
+            
+            # Apply fixed rotation
+            q_corr = quaternion_multiply(self.q_fixed, q_sensor_raw)
+            q_corr = quaternion_multiply(q_corr, quaternion_inverse(self.q_fixed))
+            
+            # Apply pitch correction
+            q_final = quaternion_multiply(self.q_pitch_corr, q_corr)
+            
+            # Extract gravity vector using the quaternion
+            self.projected_gravity = quat_rotate_inverse(q_final, [0, 0, -1.0])
+            
+            # Get gyro data and apply rotation
+            # gyro = np.dot(self.R_total, self.imu_sensor.gyro)
+            # self.angular_velocity = gyro
 
     def read_feet_contact(self):
         """Read data from foot contact sensors"""
@@ -266,7 +263,6 @@ class WalkPolicy:
             if ready:
                 try:
                     self.bt_client_sock, address = self.bt_server_sock.accept()
-                    self.bt_client_sock.setblocking(0)  # Make socket non-blocking
                     print(f"Accepted Bluetooth connection from {address}")
                 except Exception as e:
                     print(f"Error accepting Bluetooth connection: {e}")
@@ -383,6 +379,8 @@ class WalkPolicy:
             print("Waiting for joint states...")
             time.sleep(0.5)
         
+        self.check_joystick_connection()
+        
         last_time = time.time()
         log_time = time.time()
     
@@ -391,8 +389,7 @@ class WalkPolicy:
             
             # 1. Read all sensor data
             self.read_imu_data()
-            self.read_feet_contact()
-            self.check_joystick_connection()
+            self.read_feet_contact()        
             self.read_joystick_data()
             self.read_joint_states()
             
