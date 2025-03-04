@@ -244,7 +244,7 @@ class WalkPolicy:
             q_final = quaternion_multiply(self.q_pitch_corr, q_corr)
             
             # Extract gravity vector using the quaternion
-            self.projected_gravity = quat_rotate_inverse(q_final, [0, 0, -1.0])
+            #self.projected_gravity = quat_rotate_inverse(q_final, [0, 0, -1.0])
             
             # Get gyro data and apply rotation
             # gyro = np.dot(self.R_total, self.imu_sensor.gyro)
@@ -414,13 +414,12 @@ class WalkPolicy:
             if current_time - log_time >= self.log_interval:
                 loop_rate = 1.0 / (current_time - last_time) if current_time > last_time else 0
                 print(f"Control loop running at {loop_rate:.2f} Hz")
-                print(f"Command velocity: {self.cmd_vel}")
-                print(f"Feet contact: {self.feet_contact}")
                 
                 if self.verbose:
                     print(f"Projected gravity: {self.projected_gravity}")
                     print(f"Angular velocity: {self.angular_velocity}")
                     print(f"cmd_vel: {self.cmd_vel}")
+                    print(f"Feet contact: {self.feet_contact}")
                 
                 log_time = current_time
             

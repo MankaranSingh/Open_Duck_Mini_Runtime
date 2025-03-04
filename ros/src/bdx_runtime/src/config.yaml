@@ -11,7 +11,7 @@ bluetooth:
 
 # Hardware control settings
 hardware:
-  enable_motors: false
+  enable_motors: true
   kp: 32.0  # Proportional gain
   kd: 0.0   # Derivative gain
 
@@ -56,4 +56,4 @@ mask_joints:
 # Debug settings
 debug:
   log_interval: 5.0  # How often to print diagnostic info (seconds)
-  verbose: false
+  verbose: true
