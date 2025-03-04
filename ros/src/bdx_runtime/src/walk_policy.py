@@ -380,6 +380,8 @@ class WalkPolicy:
             time.sleep(0.5)
         
         self.check_joystick_connection()
+
+        input("Press Enter to start the control loop...")
         
         last_time = time.time()
         log_time = time.time()
@@ -418,6 +420,7 @@ class WalkPolicy:
                 if self.verbose:
                     print(f"Projected gravity: {self.projected_gravity}")
                     print(f"Angular velocity: {self.angular_velocity}")
+                    print(f"cmd_vel: {self.cmd_vel}")
                 
                 log_time = current_time
             
