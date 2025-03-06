@@ -136,7 +136,7 @@ class HWI:
         self.dxl_io.set_goal_position(ids_positions)
 
     def set_position(self, joint_name, position):
-        self.dxl_io.set_goal_position({self.joints[joint_name]: np.rad2deg(-position)})
+        self.dxl_io.set_goal_position({self.joints[joint_name]: np.rad2deg(position)})
 
     def get_present_positions(self):
         """

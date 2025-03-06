@@ -14,6 +14,7 @@ import adafruit_bno055
 from adafruit_extended_bus import ExtendedI2C as I2C
 from mini_bdx_runtime.hwi_feetech_pypot import HWI
 from mini_bdx_runtime.rl_utils import quat_rotate_inverse
+
 from tf.transformations import (
     quaternion_multiply, 
     quaternion_inverse, 
@@ -244,11 +245,11 @@ class WalkPolicy:
             q_final = quaternion_multiply(self.q_pitch_corr, q_corr)
             
             # Extract gravity vector using the quaternion
-            #self.projected_gravity = quat_rotate_inverse(q_final, [0, 0, -1.0])
+            self.projected_gravity = quat_rotate_inverse(q_final, [0, 0, -1.0])
             
             # Get gyro data and apply rotation
-            # gyro = np.dot(self.R_total, self.imu_sensor.gyro)
-            # self.angular_velocity = gyro
+            gyro = np.dot(self.R_total, self.imu_sensor.gyro)
+            self.angular_velocity = gyro
 
     def read_feet_contact(self):
         """Read data from foot contact sensors"""
