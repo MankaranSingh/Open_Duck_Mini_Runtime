@@ -1,0 +1,10 @@
+<launch>
+  <!-- Launch robot_state_publisher from its package -->
+  <param name="robot_description" command="cat $(find bdx_runtime)/urdf/mini2_bdx.urdf" />
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" />
+
+  <!-- Launch joint_state_publisher with a custom parameter for source_list -->
+  <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher" output="screen">
+    <param name="source_list" value="['current_joint_states']" type="yaml" />
+  </node>
+</launch>
