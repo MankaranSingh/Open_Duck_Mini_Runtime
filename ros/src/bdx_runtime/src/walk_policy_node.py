@@ -156,6 +156,8 @@ class WalkPolicyInferenceNode:
         
         rospy.loginfo("All sensor data received. Starting policy execution.")
         self.last_inference_time = rospy.Time.now()
+
+        input("Press Enter to start the control loop...")
         
         while not rospy.is_shutdown():
             # Wait until all sensor data has been updated since last inference
