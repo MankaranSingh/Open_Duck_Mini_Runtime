@@ -20,10 +20,15 @@ policy_params:
   joint_pos_scale: 1.0
   joint_vel_scale: 1.0
   angular_vel_scale: 0.25
+  angular_vel_scale_obs: 1.0
   power_scale: 1.5
-  obs_history_length: 2
-  action_history_length: 2
-  obs_dim: 35
+  obs_history_length: 1
+  action_history_length: 3
+  obs_dim: 40
+
+# Clipping parameters
+action_clip: [-5.0, 5.0]
+obs_clip: [-5.0, 5.0]
 
 # Command velocity limits
 cmd_vel_limits:
@@ -33,7 +38,7 @@ cmd_vel_limits:
 
 # Model settings
 model:
-  path: "../assets/policy.onnx"
+  path: "../assets/policy_low_vel2.onnx"
 
 # Sensor settings
 sensors:

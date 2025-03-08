@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import time
 import numpy as np
 import argparse
@@ -89,18 +90,31 @@ class WalkPolicy:
         # Policy scaling factors
         self.joint_pos_scale = policy_params.get("joint_pos_scale", 1.0)
         self.joint_vel_scale = policy_params.get("joint_vel_scale", 1.0)
+        self.angular_vel_scale_obs = policy_params.get("angular_vel_scale_obs", 1.0)
         self.angular_vel_scale = policy_params.get("angular_vel_scale", 0.25)
         self.power_scale = policy_params.get("power_scale", 1.5)
         
         # History lengths
-        self.obs_history_length = policy_params.get("obs_history_length", 2)
-        self.action_history_length = policy_params.get("action_history_length", 2)
+        self.obs_history_length = policy_params.get("obs_history_length", 1)
+        self.action_history_length = policy_params.get("action_history_length", 3)
+        self.obs_size = policy_params.get("obs_dim", 40)
         
         # Command velocity limits
         cmd_vel_limits = self.config.get("cmd_vel_limits", {})
         self.lin_vel_x_range = cmd_vel_limits.get("linear_x", [-0.3, 0.3])
         self.lin_vel_y_range = cmd_vel_limits.get("linear_y", [-0.3, 0.3])
         self.yaw_range = cmd_vel_limits.get("angular_z", [-0.3, 0.3])
+        
+        # Clipping params
+        self.action_clip = [-5.0, 5.0]
+        self.obs_clip = [-5.0, 5.0]
+        
+        # Initialize default position
+        self.init_pos = np.array([
+            0.002, 0.053, -0.63, 1.368, -0.784, 
+            0.0, 0, 0, 0, 0, 0, 
+            -0.003, -0.065, 0.635, 1.379, -0.796,
+        ])
 
     def load_config(self, config_path: Optional[str] = None) -> Dict[str, Any]:
         """Load configuration from YAML file or use defaults"""
@@ -341,33 +355,38 @@ class WalkPolicy:
             self.projected_gravity,
             self.joint_positions * self.joint_pos_scale,
             self.joint_velocities * self.joint_vel_scale,
+            self.angular_velocity * self.angular_vel_scale_obs,
+            self.feet_contact
         ])
         
         # Update observation history
         self.obs_history[1:, :] = self.obs_history[:-1, :].copy()
         self.obs_history[0, :len(obs)] = obs
         
-        # Combine observation and action histories
-        combined = np.concatenate([self.obs_history, self.action_history], axis=-1)
+        # Combine with action history
+        input_data = np.concatenate([self.obs_history.flatten(), self.action_history.flatten(), self.cmd_vel]).reshape(1, -1)
         
-        # Add command velocity
-        if self.cmd_vel is None:
-            self.cmd_vel = np.zeros(3)
-        input_data = np.concatenate([combined.flatten(), self.cmd_vel]).reshape(1, -1)
+        # Clip observations
+        input_data = np.clip(input_data, self.obs_clip[0], self.obs_clip[1])
         
         # Run the model
         outputs = self.model.run(None, {'obs': input_data.astype(np.float32)})
-        # Extract actions
+        
+        # Extract and process actions
         actions = outputs[0].flatten()
-        # Mask specified joints
-        actions[self.mask_joint_idx] = 0.0
+        
+        # Clip actions
+        actions = np.clip(actions, self.action_clip[0], self.action_clip[1])
         
         # Update action history
         self.action_history[1:, :] = self.action_history[:-1, :].copy()
-        self.action_history[0, :] = actions
+        self.action_history[0, :] = actions.copy()
         
-        # Scale and return actions
-        return actions * self.power_scale
+        # Mask specified joints
+        actions[self.mask_joint_idx] = 0.0
+        
+        # Return final positions with init_pos offset and power_scale
+        return actions*self.power_scale+self.init_pos
     
 
     def run(self):
@@ -394,6 +413,7 @@ class WalkPolicy:
             self.read_imu_data()
             self.read_feet_contact()        
             self.read_joystick_data()
+            self.read_joystick_connection()
             self.read_joint_states()
             
             # 2. Run policy computation
@@ -401,14 +421,13 @@ class WalkPolicy:
             
             # 3. Send commands to hardware
             if joint_commands is not None and self.config.get("hardware", {}).get("enable_motors", True):
-                # Extract commands for actual joints
-                command_dict = {}
+                # Send commands directly as positions, no need for additional conversion
+                joint_dict = {}
                 for i, name in enumerate(self.joint_names):
-                    if name not in self.mask_joints and i < len(joint_commands):
-                        command_dict[name] = joint_commands[i]
+                    if name not in self.mask_joints:
+                        joint_dict[name] = joint_commands[i]
                 
-                # Send commands to hardware
-                self.hwi.set_position_all(command_dict)
+                self.hwi.set_position_all(joint_dict)
             
             # 4. Print diagnostics occasionally based on config log_interval
             current_time = time.time()

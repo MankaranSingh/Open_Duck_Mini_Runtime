@@ -5,3 +5,4 @@ build
 devel
 .catkin_workspace
 motions
+ros/src/CMakeLists.txt
