@@ -50,7 +50,7 @@ class MujocoSimNode:
         self.target_positions = np.copy(self.init_pos)
         
         # PD control parameters
-        self.kps = np.array([8.55] * 16)
+        self.kps = np.array([6.55] * 16)
         self.kds = np.array([0.65] * 16)
         
         # Simulation control
@@ -149,23 +149,28 @@ class MujocoSimNode:
         msg.header.frame_id = "imu_link"
         
         # Extract quaternion from model state (wxyz -> xyzw)
+        noise_orientation = np.random.normal(0, 0.0, 3)
         quat = self.data.qpos[3:7].copy()  # [w, x, y, z]
-        msg.orientation.x = quat[1]
-        msg.orientation.y = quat[2]
-        msg.orientation.z = quat[3]
+        msg.orientation.x = quat[1] + noise_orientation[0]
+        msg.orientation.y = quat[2] + noise_orientation[1]
+        msg.orientation.z = quat[3] + noise_orientation[2]
         msg.orientation.w = quat[0]
         
-        # Copy angular velocity
-        msg.angular_velocity.x = self.data.qvel[3]
-        msg.angular_velocity.y = self.data.qvel[4]
-        msg.angular_velocity.z = self.data.qvel[5]
+        # Copy angular velocity with added noise
+        noise_angular_velocity = np.random.normal(0, 0.0, 3)  # Mean 0, std 0.01
+        msg.angular_velocity.x = self.data.qvel[3] + noise_angular_velocity[0]
+        msg.angular_velocity.y = self.data.qvel[4] + noise_angular_velocity[1]
+        msg.angular_velocity.z = self.data.qvel[5] + noise_angular_velocity[2]
         
         # Set acceleration (in this simulation, gravity is -z)
         # Transform from global to robot frame using the quaternion
-        gravity = self.quat_rotate_inverse([quat[1], quat[2], quat[3], quat[0]], [0, 0, -9.81])
-        msg.linear_acceleration.x = gravity[0]
-        msg.linear_acceleration.y = gravity[1]
-        msg.linear_acceleration.z = gravity[2]
+        gravity = self.quat_rotate_inverse([quat[1], quat[2], quat[3], quat[0]], [0, 0, -1.0])
+        
+        # Add noise to linear acceleration
+        noise_linear_acceleration = np.random.normal(0, 2.5, 3)  # Mean 0, std 0.1
+        msg.linear_acceleration.x = gravity[0] + noise_linear_acceleration[0]
+        msg.linear_acceleration.y = gravity[1] + noise_linear_acceleration[1]
+        msg.linear_acceleration.z = gravity[2] + noise_linear_acceleration[2]
         
         self.imu_pub.publish(msg)
     
@@ -189,9 +194,11 @@ class MujocoSimNode:
                 # Apply control
                 tau = self.pd_control()
                 self.data.ctrl[:] = tau
+                self.data.qvel[6:22] = np.clip(self.data.qvel[6:22], -3.2, 3.2)  # Clip joint velocities
                 
                 # Step the simulation
                 mujoco.mj_step(self.model, self.data)
+                self.data.qvel[6:22] = np.clip(self.data.qvel[6:22], -3.2, 3.2)  # Clip joint velocities
                 self.counter += 1
                 iterations += 1
                 
@@ -206,20 +213,20 @@ class MujocoSimNode:
                     self.viewer.sync()
                 
                 # Performance reporting
-                if time.time() - last_report_time >= 5.0:
-                    fps = iterations / (time.time() - last_report_time)
-                    rospy.loginfo(f"Simulation running at {fps:.2f} FPS")
-                    iterations = 0
-                    last_report_time = time.time()
+                # if time.time() - last_report_time >= 5.0:
+                #     fps = iterations / (time.time() - last_report_time)
+                #     rospy.loginfo(f"Simulation running at {fps:.2f} FPS")
+                #     iterations = 0
+                #     last_report_time = time.time()
                 
                 # Control timing to maintain simulation rate
-                elapsed = time.time() - start_time
-                if elapsed < self.model.opt.timestep:
-                    remaining = self.model.opt.timestep - elapsed
-                    if remaining > 0:
-                        time.sleep(remaining)
-                else:
-                    rospy.logwarn_throttle(1.0, f"Simulation running slower than real-time: {1.0/elapsed:.2f} Hz")
+                # elapsed = time.time() - start_time
+                # if elapsed < self.model.opt.timestep:
+                #     remaining = self.model.opt.timestep - elapsed
+                #     if remaining > 0:
+                #         time.sleep(remaining)
+                # else:
+                #     rospy.logwarn_throttle(1.0, f"Simulation running slower than real-time: {1.0/elapsed:.2f} Hz")
                 
                 rate.sleep()
                 
