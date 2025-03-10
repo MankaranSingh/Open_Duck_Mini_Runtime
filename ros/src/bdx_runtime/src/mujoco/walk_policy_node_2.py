@@ -6,6 +6,7 @@ import numpy as np
 import time
 import os
 from collections import deque
+from poly_reference_motion import PolyReferenceMotion
 
 # ROS message types
 from sensor_msgs.msg import JointState, Imu
@@ -33,7 +34,7 @@ class WalkPolicyInferenceNode:
         
         # Load the ONNX model
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(current_dir, '../../assets/policy_low_vel4.onnx')
+        model_path = os.path.join(current_dir, '../../assets/policy_mujoco.onnx')
         self.model = ort.InferenceSession(model_path, providers=['CUDAExecutionProvider'])
         self.tcp_nodelay = True
         
@@ -56,6 +57,7 @@ class WalkPolicyInferenceNode:
         self.joint_velocities = None
         self.projected_gravity = None
         self.angular_velocity = None
+        self.acceleration = None
         
         # Timestamps for tracking sensor updates
         self.last_imu_update = None
@@ -66,7 +68,7 @@ class WalkPolicyInferenceNode:
         
         # Initialize history arrays
         self.obs_history = np.zeros((self.obs_history_length, self.obs_size))  # Adjust size as needed
-        self.action_history = np.zeros((self.action_history_length, len(self.joint_names)))
+        self.action_history = np.zeros((self.action_history_length, 14))
         
         # For rate logging
         self.last_rate_log_time = rospy.Time.now().to_sec()
@@ -76,6 +78,9 @@ class WalkPolicyInferenceNode:
                 -0.003, -0.065, 0.635, 1.379, -0.796,
             ])
         
+        self.PRM = PolyReferenceMotion("./polynomial_coefficients.pkl")
+        self.imitation_i = 0
+
         rospy.loginfo("Walk Policy Inference Node initialized.")
     
     def setup_policy_params(self):
@@ -85,17 +90,17 @@ class WalkPolicyInferenceNode:
         self.joint_vel_scale = 1.0
         self.angular_vel_scale_obs = 1.0
         self.angular_vel_scale = 0.25
-        self.obs_history_length = 3
+        self.obs_history_length = 1
         self.action_history_length = 3
         self.obs_size = 40
 
-        self.action_clip = [-1.5, 1.5]
+        self.action_clip = [-5.0, 5.0]
         self.obs_clip = [-5.0, 5.0]
         
-        self.power_scale = 1.0
-        self.lin_vel_x_range = [-0.3, 0.5]
+        self.power_scale = 0.25
+        self.lin_vel_x_range = [-0.3, 0.3]
         self.lin_vel_y_range = [-0.3, 0.3]
-        self.yaw_range = [-0.8, 0.8]
+        self.yaw_range = [-0.3, 0.3]
         
         # Joint names and masking
         self.joint_names = [
@@ -105,14 +110,16 @@ class WalkPolicyInferenceNode:
             "right_hip_yaw", "right_hip_roll", "right_hip_pitch", "right_knee", "right_ankle"
         ]
         
-        self.mask_joints = ['neck_pitch', 'head_pitch', 'head_yaw', "head_roll", "left_antenna", "right_antenna"]
+        self.mask_joints = ["left_antenna", "right_antenna"]
         self.mask_joint_idx = np.array([self.joint_names.index(joint) for joint in self.mask_joints])
+        self.enabled_joint_idx = np.array([i for i in range(len(self.joint_names)) if i not in self.mask_joint_idx])
     
     def imu_callback(self, msg):
         """Process incoming IMU data."""
         quat = np.array([msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w])
         self.projected_gravity = quat_rotate_inverse(quat, [0, 0, -1.0])
         self.angular_velocity = np.array([msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z])
+        self.acceleration = np.array([msg.linear_acceleration.x, msg.linear_acceleration.y, msg.linear_acceleration.z])
         self.last_imu_update = rospy.Time.now()
     
     def scale_cmd_vel(self, linear_x, linear_y, angular_z):
@@ -139,6 +146,11 @@ class WalkPolicyInferenceNode:
         self.joint_positions = np.array(msg.position)
         self.joint_velocities = np.array(msg.velocity)
         self.last_joint_states_update = rospy.Time.now()
+
+    def add_fake_head(self, pos):
+        # add just the antennas now
+        pos_with_head = np.insert(pos, 9, [0, 0])
+        return np.array(pos_with_head)
     
     def run_policy(self):
         """Run the inference loop."""
@@ -178,41 +190,42 @@ class WalkPolicyInferenceNode:
             # Record the time of this inference cycle
             self.last_inference_time = rospy.Time.now()
             
+            self.imitation_i += 1
+            self.imitation_i = self.imitation_i % 450
+            ref = np.array(self.PRM.get_reference_motion(*self.cmd_vel, self.imitation_i))
+
             # Prepare the input for the model
             obs = np.concatenate([
-                self.projected_gravity,
-                (self.joint_positions-self.init_pos) * self.joint_pos_scale,
-                self.joint_velocities * self.joint_vel_scale,
-                self.angular_velocity * self.angular_vel_scale_obs,
-                self.feet_contact
-            ])
+                self.angular_velocity,
+                self.acceleration,
+                self.cmd_vel,
+                [0, 0, 0, 0],
+                (self.joint_positions-self.init_pos)[self.enabled_joint_idx],
+                self.joint_velocities[self.enabled_joint_idx] * 0.05,
+                self.action_history[0],
+                self.action_history[1],
+                self.action_history[2],
+                self.feet_contact,
+                ref
+            ]).reshape(1, -1)
             
-            # Update observation history
-            self.obs_history[1:, :] = self.obs_history[:-1, :].copy()
-            self.obs_history[0, :len(obs)] = obs
-            
-            # Combine with action history
-            input_data = np.concatenate([self.obs_history.flatten(), self.action_history.flatten(), self.cmd_vel]).reshape(1, -1)
-
-            input_data = np.clip(input_data, self.obs_clip[0], self.obs_clip[1])
             # Run the model
-            outputs = self.model.run(None, {'obs': input_data.astype(np.float32)})
+            outputs = self.model.run(None, {'obs': obs.astype(np.float32)})
             
             # Extract and process actions
             actions = outputs[0].flatten()
 
-            # Update action history
-            actions = np.clip(actions, self.action_clip[0], self.action_clip[1])
-
             self.action_history[1:, :] = self.action_history[:-1, :].copy()
             self.action_history[0, :] = actions.copy()
 
-            actions[self.mask_joint_idx] = 0.0
+            robot_action = self.init_pos[self.enabled_joint_idx] + actions * 0.25
+            robot_action = self.add_fake_head(robot_action)
+                    
             # Publish target joint states
             joint_state_msg = JointState()
             joint_state_msg.header.stamp = rospy.Time.now()
             joint_state_msg.name = self.joint_names
-            joint_state_msg.position = (actions*self.power_scale+self.init_pos).tolist()
+            joint_state_msg.position = robot_action.tolist()
             self.target_joint_states_pub.publish(joint_state_msg)
             
             # Sleep to maintain 50Hz

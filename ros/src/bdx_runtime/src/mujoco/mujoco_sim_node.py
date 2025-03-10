@@ -23,14 +23,19 @@ class MujocoSimNode:
         
         # Parse arguments
         parser = argparse.ArgumentParser()
-        parser.add_argument("--model_path", type=str, default="/home/mankaran/Desktop/rl/Open_Duck_Mini/mini_bdx/robots/open_duck_mini_v2/scene.xml",
-                           help="Path to the MuJoCo XML model")
         parser.add_argument("--headless", action="store_true", default=False,
                            help="Run without visualization")
+        parser.add_argument("--control_mode", type=str, default="torque", choices=["position", "torque"],
+                           help="Control mode for the simulation")
         args, unknown = parser.parse_known_args()
+
+        if args.control_mode == "torque":
+            self.model_path = "/home/mankaran/Desktop/rl/Open_Duck_Mini/mini_bdx/robots/open_duck_mini_v2/scene.xml"
+        else:
+            self.model_path = "/home/mankaran/Desktop/rl/Open_Duck_Mini/mini_bdx/robots/open_duck_mini_v2/scene_position.xml"
         
-        self.model_path = os.path.join(os.getcwd(), args.model_path)
         self.headless = args.headless
+        self.position_control = args.control_mode == "position"
         
         # Initialize MuJoCo model
         self.setup_mujoco()
@@ -51,16 +56,39 @@ class MujocoSimNode:
         
         # PD control parameters
         self.kps = np.array([6.55] * 16)
-        self.kds = np.array([0.65] * 16)
+        self.kds = np.array([0.6] * 16)
+        
+        # Low-pass filter parameters
+        self.dt = self.model.opt.timestep
+        self.cutoff_freq = 37.5  # Hz
+        self.rc = 1.0 / (2.0 * np.pi * self.cutoff_freq)
+        self.alpha = self.dt / (self.dt + self.rc)
+        self.filtered_positions = np.zeros(16)  # Initialize with zeros
+        rospy.loginfo(f"Low-pass filter configured: cutoff freq={self.cutoff_freq}Hz, alpha={self.alpha:.4f}")
         
         # Simulation control
-        self.control_decimation = 4  # Run control at slower rate than physics
+        self.control_decimation = 2  # Run control at slower rate than physics
         self.counter = 0
         
         # Set up the viewer
         self.viewer = None if self.headless else mujoco.viewer.launch_passive(
             self.model, self.data, show_left_ui=False, show_right_ui=False
         )
+        
+        # Identify the body to which the IMU is attached
+        self.imu_body_name = rospy.get_param('~imu_body_name', 'torso')
+        self.imu_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, self.imu_body_name)
+        if self.imu_body_id < 0:
+            # Try some common alternatives
+            for name in ['base', 'body', 'chassis', 'root']:
+                self.imu_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, name)
+                if self.imu_body_id >= 0:
+                    self.imu_body_name = name
+                    break
+        
+        if self.imu_body_id < 0:
+            rospy.logwarn(f"Could not find the IMU body '{self.imu_body_name}'. Using body ID 1 (typically the root body).")
+            self.imu_body_id = 1  # Typically the root body in MuJoCo models
         
         rospy.loginfo("MuJoCo simulation node initialized. Model: %s", self.model_path)
     
@@ -69,7 +97,7 @@ class MujocoSimNode:
         rospy.loginfo(f"Loading MuJoCo model from: {self.model_path}")
         try:
             self.model = mujoco.MjModel.from_xml_path(self.model_path)
-            self.model.opt.timestep = 0.005  # 200 Hz physics
+            self.model.opt.timestep = 0.01  # 100 Hz
             self.data = mujoco.MjData(self.model)
             
             # Initial pose
@@ -104,11 +132,17 @@ class MujocoSimNode:
             if i < len(self.target_positions):  # Ensure we don't go out of bounds
                 self.target_positions[i] = msg.position[i]
     
-    def pd_control(self):
-        """PD controller for joint positions."""
-        tau = (self.target_positions - self.data.qpos[7:23]) * self.kps
-        tau -= self.data.qvel[6:22] * self.kds
-        return tau
+    def compute_control(self):
+        """PD controller for joint positions with low-pass filter."""
+        # Calculate raw PD control signal
+        self.filtered_positions = self.alpha * self.target_positions + (1.0 - self.alpha) * self.filtered_positions
+
+        if not self.position_control:
+            torques = (self.filtered_positions - self.data.qpos[7:23]) * self.kps
+            torques -= self.data.qvel[6:22] * self.kds
+            return torques
+        else:
+            return self.filtered_positions 
     
     def get_feet_contact(self):
         """Check foot contact with the floor."""
@@ -149,7 +183,7 @@ class MujocoSimNode:
         msg.header.frame_id = "imu_link"
         
         # Extract quaternion from model state (wxyz -> xyzw)
-        noise_orientation = np.random.normal(0, 0.0, 3)
+        noise_orientation = np.random.normal(0, 0.02, 3)
         quat = self.data.qpos[3:7].copy()  # [w, x, y, z]
         msg.orientation.x = quat[1] + noise_orientation[0]
         msg.orientation.y = quat[2] + noise_orientation[1]
@@ -157,20 +191,32 @@ class MujocoSimNode:
         msg.orientation.w = quat[0]
         
         # Copy angular velocity with added noise
-        noise_angular_velocity = np.random.normal(0, 0.0, 3)  # Mean 0, std 0.01
+        noise_angular_velocity = np.random.normal(0, 0.05, 3)  # Mean 0, std 0.01
         msg.angular_velocity.x = self.data.qvel[3] + noise_angular_velocity[0]
         msg.angular_velocity.y = self.data.qvel[4] + noise_angular_velocity[1]
         msg.angular_velocity.z = self.data.qvel[5] + noise_angular_velocity[2]
         
-        # Set acceleration (in this simulation, gravity is -z)
-        # Transform from global to robot frame using the quaternion
-        gravity = self.quat_rotate_inverse([quat[1], quat[2], quat[3], quat[0]], [0, 0, -1.0])
+        # Get acceleration data for the robot body
+        accel = np.zeros(6, dtype=np.float64)
+        mujoco.mj_objectAcceleration(self.model, self.data, mujoco.mjtObj.mjOBJ_BODY, self.imu_body_id, accel, 0)
+        
+        # Linear acceleration in world frame is the first 3 values
+        lin_acc_world = accel[:3]
+        
+        # Transform to robot frame using quaternion inverse
+        lin_acc_local = self.quat_rotate_inverse([quat[1], quat[2], quat[3], quat[0]], lin_acc_world)
+        
+        # Add gravity effect (in robot frame) - gravity in MuJoCo is [0, 0, -9.81]
+        gravity_local = self.quat_rotate_inverse([quat[1], quat[2], quat[3], quat[0]], [0, 0, -9.81])
+        lin_acc_local += gravity_local
         
         # Add noise to linear acceleration
-        noise_linear_acceleration = np.random.normal(0, 2.5, 3)  # Mean 0, std 0.1
-        msg.linear_acceleration.x = gravity[0] + noise_linear_acceleration[0]
-        msg.linear_acceleration.y = gravity[1] + noise_linear_acceleration[1]
-        msg.linear_acceleration.z = gravity[2] + noise_linear_acceleration[2]
+        noise_linear_acceleration = np.random.normal(0, 0.5, 3)
+        
+        # Set linear acceleration in message
+        msg.linear_acceleration.x = lin_acc_local[0] + noise_linear_acceleration[0]
+        msg.linear_acceleration.y = lin_acc_local[1] + noise_linear_acceleration[1]
+        msg.linear_acceleration.z = lin_acc_local[2] + noise_linear_acceleration[2]
         
         self.imu_pub.publish(msg)
     
@@ -183,7 +229,7 @@ class MujocoSimNode:
     
     def run(self):
         """Main simulation loop."""
-        rate = rospy.Rate(200)  # Match MuJoCo physics rate (200 Hz)
+        rate = rospy.Rate(100)  # Match MuJoCo physics rate (250 Hz, was 200 Hz)
         last_report_time = time.time()
         iterations = 0
         
@@ -192,18 +238,15 @@ class MujocoSimNode:
                 start_time = time.time()
                 
                 # Apply control
-                tau = self.pd_control()
-                self.data.ctrl[:] = tau
-                self.data.qvel[6:22] = np.clip(self.data.qvel[6:22], -3.2, 3.2)  # Clip joint velocities
-                
+                control = self.compute_control()
+                self.data.ctrl[:] = control                
                 # Step the simulation
                 mujoco.mj_step(self.model, self.data)
-                self.data.qvel[6:22] = np.clip(self.data.qvel[6:22], -3.2, 3.2)  # Clip joint velocities
                 self.counter += 1
                 iterations += 1
                 
                 # Publish sensor data at a slower rate
-                if self.counter % (self.control_decimation//2) == 0:
+                if self.counter % (self.control_decimation) == 0:
                     self.publish_joint_states()
                     self.publish_imu_data()
                     self.publish_feet_contact()
@@ -213,20 +256,20 @@ class MujocoSimNode:
                     self.viewer.sync()
                 
                 # Performance reporting
-                # if time.time() - last_report_time >= 5.0:
-                #     fps = iterations / (time.time() - last_report_time)
-                #     rospy.loginfo(f"Simulation running at {fps:.2f} FPS")
-                #     iterations = 0
-                #     last_report_time = time.time()
+                if time.time() - last_report_time >= 5.0:
+                    fps = iterations / (time.time() - last_report_time)
+                    rospy.loginfo(f"Simulation running at {fps:.2f} FPS")
+                    iterations = 0
+                    last_report_time = time.time()
                 
                 # Control timing to maintain simulation rate
-                # elapsed = time.time() - start_time
-                # if elapsed < self.model.opt.timestep:
-                #     remaining = self.model.opt.timestep - elapsed
-                #     if remaining > 0:
-                #         time.sleep(remaining)
-                # else:
-                #     rospy.logwarn_throttle(1.0, f"Simulation running slower than real-time: {1.0/elapsed:.2f} Hz")
+                elapsed = time.time() - start_time
+                if elapsed < self.model.opt.timestep:
+                    remaining = self.model.opt.timestep - elapsed
+                    if remaining > 0:
+                        time.sleep(remaining)
+                else:
+                    rospy.logwarn_throttle(1.0, f"Simulation running slower than real-time: {1.0/elapsed:.2f} Hz")
                 
                 rate.sleep()
                 
