@@ -53,6 +53,7 @@ class MujocoSimNode:
         
         # Control variables
         self.target_positions = np.copy(self.init_pos)
+        self.last_positions = np.copy(self.init_pos)
         
         # PD control parameters
         self.kps = np.array([6.55] * 16)
@@ -135,7 +136,8 @@ class MujocoSimNode:
     def compute_control(self):
         """PD controller for joint positions with low-pass filter."""
         # Calculate raw PD control signal
-        self.filtered_positions = self.alpha * self.target_positions + (1.0 - self.alpha) * self.filtered_positions
+        self.filtered_positions = self.alpha * self.target_positions + (1.0 - self.alpha) * self.last_positions
+        self.last_positions[:] = self.target_positions
 
         if not self.position_control:
             torques = (self.filtered_positions - self.data.qpos[7:23]) * self.kps
@@ -245,11 +247,10 @@ class MujocoSimNode:
                 self.counter += 1
                 iterations += 1
                 
-                # Publish sensor data at a slower rate
-                if self.counter % (self.control_decimation) == 0:
-                    self.publish_joint_states()
-                    self.publish_imu_data()
-                    self.publish_feet_contact()
+                # Publish sensor data
+                self.publish_joint_states()
+                self.publish_imu_data()
+                self.publish_feet_contact()
                 
                 # Update viewer if available
                 if self.viewer:

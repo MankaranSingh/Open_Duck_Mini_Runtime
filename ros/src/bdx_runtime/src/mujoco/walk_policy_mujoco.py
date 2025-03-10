@@ -33,7 +33,7 @@ class WalkPolicyInferenceNode:
         
         # Load the ONNX model
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(current_dir, '../../assets/policy_low_vel4.onnx')
+        model_path = os.path.join(current_dir, '../../assets/policy_low_vel9.onnx')
         self.model = ort.InferenceSession(model_path, providers=['CUDAExecutionProvider'])
         self.tcp_nodelay = True
         
@@ -95,7 +95,7 @@ class WalkPolicyInferenceNode:
         self.power_scale = 1.0
         self.lin_vel_x_range = [-0.3, 0.5]
         self.lin_vel_y_range = [-0.3, 0.3]
-        self.yaw_range = [-0.8, 0.8]
+        self.yaw_range = [-1.5, 1.5]
         
         # Joint names and masking
         self.joint_names = [
