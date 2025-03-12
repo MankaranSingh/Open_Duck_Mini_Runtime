@@ -242,15 +242,14 @@ class WalkPolicy:
 
     def read_imu_data(self):
         """Read data from IMU sensor"""
-        if self.imu_sensor:
-            # Get sensor quaternion (w, x, y, z format)
-            qw, qx, qy, qz = self.imu_sensor.quaternion
-            # Convert to (x, y, z, w) format
-            q_final = [qx, qy, qz, qw]
-            
-            # Extract gravity vector using the quaternion
-            self.projected_gravity = quat_rotate_inverse(q_final, [0, 0, -1.0])            
-            self.angular_velocity = self.imu_sensor.gyro
+        # Get sensor quaternion (w, x, y, z format)
+        qw, qx, qy, qz = self.imu_sensor.quaternion
+        # Convert to (x, y, z, w) format
+        q_final = [qx, qy, qz, qw]
+        
+        # Extract gravity vector using the quaternion
+        self.projected_gravity = quat_rotate_inverse(q_final, [0, 0, -1.0])            
+        self.angular_velocity = self.imu_sensor.gyro
 
     def read_feet_contact(self):
         """Read data from foot contact sensors"""
