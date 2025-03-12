@@ -26,6 +26,20 @@ class WalkPolicy:
     def __init__(self, config_path=None):
         # Load configuration from file
         self.config = self.load_config(config_path)
+
+        # Joint names and masking (from config)
+        self.joint_names = [
+            "left_hip_yaw", "left_hip_roll", "left_hip_pitch", 
+            "left_knee", "left_ankle", "neck_pitch", "head_pitch", 
+            "head_yaw", "head_roll", "left_antenna", "right_antenna",
+            "right_hip_yaw", "right_hip_roll", "right_hip_pitch", "right_knee", "right_ankle"
+        ]
+        
+        self.mask_joints = self.config.get("mask_joints", [
+            'neck_pitch', 'head_pitch', 'head_yaw', "head_roll", "left_antenna", "right_antenna"
+        ])
+        self.mask_joint_idx = np.array([self.joint_names.index(joint) for joint in self.mask_joints])
+        self.enabled_joint_idx = np.array([i for i in range(len(self.joint_names)) if i not in self.mask_joint_idx])
         
         # Initialize policy parameters from config
         self.init_policy_params()
@@ -41,20 +55,6 @@ class WalkPolicy:
         model_path = os.path.join(current_dir, self.config.get("model", {}).get("path", "../assets/policy_low_vel10.onnx"))
         print(f"Loading model from: {model_path}")
         self.model = ort.InferenceSession(model_path)
-        
-        # Joint names and masking (from config)
-        self.joint_names = [
-            "left_hip_yaw", "left_hip_roll", "left_hip_pitch", 
-            "left_knee", "left_ankle", "neck_pitch", "head_pitch", 
-            "head_yaw", "head_roll", "left_antenna", "right_antenna",
-            "right_hip_yaw", "right_hip_roll", "right_hip_pitch", "right_knee", "right_ankle"
-        ]
-        
-        self.mask_joints = self.config.get("mask_joints", [
-            'neck_pitch', 'head_pitch', 'head_yaw', "head_roll", "left_antenna", "right_antenna"
-        ])
-        self.mask_joint_idx = np.array([self.joint_names.index(joint) for joint in self.mask_joints])
-        self.enabled_joint_idx = np.array([i for i in range(len(self.joint_names)) if i not in self.mask_joint_idx])
         
         # Initialize state
         self.cmd_vel = np.zeros(3)  # [linear_x, linear_y, angular_z]
