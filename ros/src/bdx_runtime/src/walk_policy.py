@@ -246,7 +246,7 @@ class WalkPolicy:
         
         # Extract gravity vector using the quaternion
         self.projected_gravity = quat_rotate_inverse(q_final, [0, 0, -1.0])            
-        self.angular_velocity = self.imu_sensor.gyro
+        self.angular_velocity = np.array(self.imu_sensor.gyro)
 
     def read_feet_contact(self):
         """Read data from foot contact sensors"""
