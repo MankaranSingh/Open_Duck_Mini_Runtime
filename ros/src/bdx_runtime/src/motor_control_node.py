@@ -81,10 +81,9 @@ class JointController:
         """
         try:
             # Retrieve a single float value from the ROS parameter server (default: 32.0)
-            kps_value = rospy.get_param("kp", 32.0)
+            kps_value = int(rospy.get_param("kp", 32.0))
             # Create a list with the same value for each joint
-            kps_list = [kps_value] * len(self.hwi.joints)
-            self.hwi.set_kps(kps_list)
+            self.hwi.set_kps(kps_value)
             message = "KP values set to {} for all joints.".format(kps_value)
             rospy.loginfo(message)
             return TriggerResponse(success=True, message=message)
@@ -99,10 +98,9 @@ class JointController:
         """
         try:
             # Retrieve a single float value from the ROS parameter server (default: 32.0)
-            kds_value = rospy.get_param("kd", 0.00)
+            kds_value = int(rospy.get_param("kd", 0.00))
             # Create a list with the same value for each joint
-            kds_list = [kds_value] * len(self.hwi.joints)
-            self.hwi.set_kds(kds_list)
+            self.hwi.set_kds(kds_value)
             message = "KD values set to {} for all joints.".format(kds_value)
             rospy.loginfo(message)
             return TriggerResponse(success=True, message=message)
