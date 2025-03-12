@@ -158,14 +158,11 @@ class WalkPolicy:
         self.hwi.turn_on()
         
         # Set KP and KD values from config
-        kp_value = hardware_config.get("kp", 32.0)
-        kd_value = hardware_config.get("kd", 0.0)
-        
-        kps_list = [kp_value] * len(self.hwi.joints)
-        kds_list = [kd_value] * len(self.hwi.joints)
-        
-        self.hwi.set_kps(kps_list)
-        self.hwi.set_kds(kds_list)
+        kp_value = int(hardware_config.get("kp", 32.0))
+        kd_value = int(hardware_config.get("kd", 0.0))
+                
+        self.hwi.set_kps(kp_value)
+        self.hwi.set_kds(kd_value)
         
         print(f"Motors initialized with KP={kp_value}, KD={kd_value}")            
         # Initialize target positions with hardware's init positions
