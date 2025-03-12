@@ -310,9 +310,6 @@ class WalkPolicy:
                         try:
                             x, y, yaw = map(float, line.split(","))
                             self.cmd_vel = self.scale_cmd_vel(x, y, yaw)
-                            if self.verbose:
-                                print(f"Joystick input: x={x}, y={y}, yaw={yaw}")
-                                print(f"Scaled cmd_vel: {self.cmd_vel}")
                         except ValueError as e:
                             print(f"Invalid joystick data format: {line} - {e}")
                         except Exception as e:
@@ -408,13 +405,6 @@ class WalkPolicy:
             self.wait_for_joystick_connection()
 
         input("Press Enter to start the control loop...")
-        
-        # Initialize cmd_vel again to make sure it's not zero
-        if self.bt_client_sock:
-            print("Joystick connected. Send some commands to verify connection...")
-            time.sleep(0.5)  # Give time for initial commands to arrive
-            self.read_joystick_data()
-            print(f"Current cmd_vel: {self.cmd_vel}")
         
         last_time = time.time()
         log_time = time.time()
