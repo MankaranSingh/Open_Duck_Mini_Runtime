@@ -12,7 +12,7 @@ bluetooth:
 # Hardware control settings
 hardware:
   enable_motors: true
-  kp: 32.0  # Proportional gain
+  kp: 14.0  # Proportional gain
   kd: 0.0   # Derivative gain
 
 # Policy parameters
@@ -21,8 +21,8 @@ policy_params:
   joint_vel_scale: 1.0
   angular_vel_scale: 0.25
   angular_vel_scale_obs: 1.0
-  power_scale: 1.5
-  obs_history_length: 1
+  power_scale: 1.0
+  obs_history_length: 3
   action_history_length: 3
   obs_dim: 40
 

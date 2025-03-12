@@ -38,7 +38,7 @@ class WalkPolicy:
         
         # Load the ONNX model from config path
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(current_dir, self.config.get("model", {}).get("path", "../assets/policy.onnx"))
+        model_path = os.path.join(current_dir, self.config.get("model", {}).get("path", "../assets/policy_low_vel10.onnx"))
         print(f"Loading model from: {model_path}")
         self.model = ort.InferenceSession(model_path)
         
@@ -54,6 +54,7 @@ class WalkPolicy:
             'neck_pitch', 'head_pitch', 'head_yaw', "head_roll", "left_antenna", "right_antenna"
         ])
         self.mask_joint_idx = np.array([self.joint_names.index(joint) for joint in self.mask_joints])
+        self.enabled_joint_idx = np.array([i for i in range(len(self.joint_names)) if i not in self.mask_joint_idx])
         
         # Initialize state
         self.cmd_vel = np.zeros(3)  # [linear_x, linear_y, angular_z]
@@ -65,7 +66,7 @@ class WalkPolicy:
         
         # Initialize histories from config
         self.obs_history = np.zeros((self.obs_history_length, self.config["policy_params"]["obs_dim"]))
-        self.action_history = np.zeros((self.action_history_length, len(self.joint_names)))
+        self.action_history = np.zeros((self.action_history_length, len(self.enabled_joint_idx)))
         
         # Setup control loop timing
         self.control_rate_hz = self.config.get("control_rate_hz", 50)
@@ -95,18 +96,18 @@ class WalkPolicy:
         self.power_scale = policy_params.get("power_scale", 1.5)
         
         # History lengths
-        self.obs_history_length = policy_params.get("obs_history_length", 1)
+        self.obs_history_length = policy_params.get("obs_history_length", 3)
         self.action_history_length = policy_params.get("action_history_length", 3)
         self.obs_size = policy_params.get("obs_dim", 40)
         
         # Command velocity limits
         cmd_vel_limits = self.config.get("cmd_vel_limits", {})
-        self.lin_vel_x_range = cmd_vel_limits.get("linear_x", [-0.3, 0.3])
+        self.lin_vel_x_range = cmd_vel_limits.get("linear_x", [-0.3, 0.4])
         self.lin_vel_y_range = cmd_vel_limits.get("linear_y", [-0.3, 0.3])
-        self.yaw_range = cmd_vel_limits.get("angular_z", [-0.3, 0.3])
+        self.yaw_range = cmd_vel_limits.get("angular_z", [-0.5, 0.5])
         
         # Clipping params
-        self.action_clip = [-5.0, 5.0]
+        self.action_clip = [-1.5, 1.5]
         self.obs_clip = [-5.0, 5.0]
         
         # Initialize default position
@@ -115,6 +116,7 @@ class WalkPolicy:
             0.0, 0, 0, 0, 0, 0, 
             -0.003, -0.065, 0.635, 1.379, -0.796,
         ])
+        self.target_joint_states = np.zeros(len(self.joint_names))
 
     def load_config(self, config_path: Optional[str] = None) -> Dict[str, Any]:
         """Load configuration from YAML file or use defaults"""
@@ -162,9 +164,8 @@ class WalkPolicy:
         kps_list = [kp_value] * len(self.hwi.joints)
         kds_list = [kd_value] * len(self.hwi.joints)
         
-        # Uncomment if your hardware supports setting these values
-        # self.hwi.set_kps(kps_list)
-        # self.hwi.set_kds(kds_list)
+        self.hwi.set_kps(kps_list)
+        self.hwi.set_kds(kds_list)
         
         print(f"Motors initialized with KP={kp_value}, KD={kd_value}")            
         # Initialize target positions with hardware's init positions
@@ -180,27 +181,23 @@ class WalkPolicy:
             i2c_bus = imu_config.get("i2c_bus", 3)
             self.i2c = I2C(i2c_bus)
             self.imu_sensor = adafruit_bno055.BNO055_I2C(self.i2c)
+            self.imu_sensor.mode = adafruit_bno055.CONFIG_MODE
+            time.sleep(0.2)
+
+            # Set axis remap
+            self.imu_sensor.axis_remap = (
+                adafruit_bno055.AXIS_REMAP_Y,        # X (Forward) now maps to physical Y
+                adafruit_bno055.AXIS_REMAP_X,        # Y (Right) now maps to physical X
+                adafruit_bno055.AXIS_REMAP_Z,        # Z (Up) remains Z
+                adafruit_bno055.AXIS_REMAP_POSITIVE, # X (new) keeps positive
+                adafruit_bno055.AXIS_REMAP_NEGATIVE, # Y (new) must be inverted
+                adafruit_bno055.AXIS_REMAP_POSITIVE  # Z (new) keeps positive
+            )
+            time.sleep(0.2)
+
             self.imu_sensor.mode = adafruit_bno055.IMUPLUS_MODE
+            time.sleep(0.2)
             
-            # Define fixed rotation for axis re-mapping: -90° about z
-            self.q_fixed = [0.0, 0.0, -0.7071, 0.7071]
-            self.R_z = np.array([
-                [0, 1, 0],
-                [-1, 0, 0],
-                [0, 0, 1]
-            ])
-            
-            # Hard-coded pitch offset correction from config
-            self.pitch_offset = imu_config.get("pitch_offset", 0.13)
-            self.q_pitch_corr = quaternion_from_euler(0, -self.pitch_offset, 0)
-            self.R_pitch = np.array([
-                [ np.cos(-self.pitch_offset), 0, np.sin(-self.pitch_offset)],
-                [ 0,                         1,                           0],
-                [-np.sin(-self.pitch_offset), 0, np.cos(-self.pitch_offset)]
-            ])
-            
-            # Combine the rotation matrices
-            self.R_total = self.R_pitch @ self.R_z
             print(f"IMU initialized successfully on I2C bus {i2c_bus} with pitch offset {self.pitch_offset}")
         except Exception as e:
             print(f"Error initializing IMU: {e}")
@@ -249,21 +246,11 @@ class WalkPolicy:
             # Get sensor quaternion (w, x, y, z format)
             qw, qx, qy, qz = self.imu_sensor.quaternion
             # Convert to (x, y, z, w) format
-            q_sensor_raw = [qx, qy, qz, qw]
-            
-            # Apply fixed rotation
-            q_corr = quaternion_multiply(self.q_fixed, q_sensor_raw)
-            q_corr = quaternion_multiply(q_corr, quaternion_inverse(self.q_fixed))
-            
-            # Apply pitch correction
-            q_final = quaternion_multiply(self.q_pitch_corr, q_corr)
+            q_final = [qx, qy, qz, qw]
             
             # Extract gravity vector using the quaternion
-            self.projected_gravity = quat_rotate_inverse(q_final, [0, 0, -1.0])
-            
-            # Get gyro data and apply rotation
-            gyro = np.dot(self.R_total, self.imu_sensor.gyro)
-            self.angular_velocity = gyro
+            self.projected_gravity = quat_rotate_inverse(q_final, [0, 0, -1.0])            
+            self.angular_velocity = self.imu_sensor.gyro
 
     def read_feet_contact(self):
         """Read data from foot contact sensors"""
@@ -286,7 +273,6 @@ class WalkPolicy:
         """Read data from Bluetooth joystick (non-blocking)"""
         if not self.bt_client_sock:
             return
-            
         try:
             ready, _, _ = select.select([self.bt_client_sock], [], [], 0)
             if ready:
@@ -352,12 +338,12 @@ class WalkPolicy:
             
         # Prepare the input for the model
         obs = np.concatenate([
-            self.projected_gravity,
-            self.joint_positions * self.joint_pos_scale,
-            self.joint_velocities * self.joint_vel_scale,
-            self.angular_velocity * self.angular_vel_scale_obs,
-            self.feet_contact
-        ])
+                self.projected_gravity,
+                (self.joint_positions-self.init_pos) * self.joint_pos_scale,
+                self.joint_velocities * self.joint_vel_scale,
+                self.angular_velocity * self.angular_vel_scale_obs,
+                self.feet_contact
+            ])
         
         # Update observation history
         self.obs_history[1:, :] = self.obs_history[:-1, :].copy()
@@ -382,13 +368,11 @@ class WalkPolicy:
         self.action_history[1:, :] = self.action_history[:-1, :].copy()
         self.action_history[0, :] = actions.copy()
         
-        # Mask specified joints
-        actions[self.mask_joint_idx] = 0.0
-        
-        # Return final positions with init_pos offset and power_scale
-        return actions*self.power_scale+self.init_pos
-    
+        self.target_joint_states[self.enabled_joint_idx] = actions*self.power_scale
+        self.target_joint_states += self.init_pos   
 
+        return self.target_joint_states
+    
     def run(self):
         """Main control loop running at 50Hz"""
         print("Starting walk policy main loop")
@@ -413,7 +397,6 @@ class WalkPolicy:
             self.read_imu_data()
             self.read_feet_contact()        
             self.read_joystick_data()
-            self.read_joystick_connection()
             self.read_joint_states()
             
             # 2. Run policy computation
@@ -475,7 +458,6 @@ class WalkPolicy:
         
         # Cleanup GPIO
         GPIO.cleanup()
-        
         print("Walk policy stopped")
 
 def main():
