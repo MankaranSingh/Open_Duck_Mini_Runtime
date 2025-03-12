@@ -237,6 +237,26 @@ class WalkPolicy:
         else:
             print("Bluetooth disabled in config")
 
+    def wait_for_joystick_connection(self):
+        """Wait for joystick connection (blocking)"""
+        if self.bt_server_sock and not self.bt_client_sock:
+            print("Waiting for Bluetooth controller to connect... (Press Ctrl+C to skip)")
+            try:
+                # Make this a blocking call with a timeout
+                self.bt_server_sock.settimeout(None)  # Block indefinitely
+                self.bt_client_sock, address = self.bt_server_sock.accept()
+                print(f"Accepted Bluetooth connection from {address}")
+                # Initialize cmd_vel to ensure it's not zero
+                self.cmd_vel = np.zeros(3)
+                return True
+            except KeyboardInterrupt:
+                print("Skipping Bluetooth connection wait")
+                return False
+            except Exception as e:
+                print(f"Error accepting Bluetooth connection: {e}")
+                return False
+        return False
+
     def read_imu_data(self):
         """Read data from IMU sensor"""
         # Get sensor quaternion (w, x, y, z format)
@@ -290,12 +310,16 @@ class WalkPolicy:
                         try:
                             x, y, yaw = map(float, line.split(","))
                             self.cmd_vel = self.scale_cmd_vel(x, y, yaw)
-                        except ValueError:
-                            print(f"Invalid joystick data: {line}")
+                            if self.verbose:
+                                print(f"Joystick input: x={x}, y={y}, yaw={yaw}")
+                                print(f"Scaled cmd_vel: {self.cmd_vel}")
+                        except ValueError as e:
+                            print(f"Invalid joystick data format: {line} - {e}")
+                        except Exception as e:
+                            print(f"Error processing joystick data: {e}")
         except Exception as e:
             if "Resource temporarily unavailable" not in str(e):  # Ignore EAGAIN errors
                 print(f"Error reading joystick data: {e}")
-
 
     def scale_cmd_vel(self, linear_x, linear_y, angular_z):
         """Scale command velocities to their respective ranges"""
@@ -379,9 +403,18 @@ class WalkPolicy:
             print("Waiting for joint states...")
             time.sleep(0.5)
         
-        self.check_joystick_connection()
+        # Wait for joystick connection (blocking)
+        if self.bt_server_sock:
+            self.wait_for_joystick_connection()
 
         input("Press Enter to start the control loop...")
+        
+        # Initialize cmd_vel again to make sure it's not zero
+        if self.bt_client_sock:
+            print("Joystick connected. Send some commands to verify connection...")
+            time.sleep(0.5)  # Give time for initial commands to arrive
+            self.read_joystick_data()
+            print(f"Current cmd_vel: {self.cmd_vel}")
         
         last_time = time.time()
         log_time = time.time()
