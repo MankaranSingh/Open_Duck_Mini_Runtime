@@ -30,10 +30,24 @@ class WalkPolicyInferenceNode:
     def __init__(self):
         # Initialize ROS node
         rospy.init_node('walk_policy_inference_node')
+
+        # Joint names and masking
+        self.joint_names = [
+            "left_hip_yaw", "left_hip_roll", "left_hip_pitch", 
+            "left_knee", "left_ankle", "neck_pitch", "head_pitch", 
+            "head_yaw", "head_roll", "left_antenna", "right_antenna",
+            "right_hip_yaw", "right_hip_roll", "right_hip_pitch", "right_knee", "right_ankle"
+        ]
+        
+        self.mask_joints = ['neck_pitch', 'head_pitch', 'head_yaw', "head_roll", "left_antenna", "right_antenna"]
+        self.mask_joint_idx = np.array([self.joint_names.index(joint) for joint in self.mask_joints])
+        self.enabled_joint_idx = np.array([i for i in range(len(self.joint_names)) if i not in self.mask_joint_idx])
+
+        self.target_joint_states = np.zeros(len(self.joint_names))
         
         # Load the ONNX model
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(current_dir, '../../assets/policy_low_vel9.onnx')
+        model_path = os.path.join(current_dir, '../../assets/policy_low_vel10.onnx')
         self.model = ort.InferenceSession(model_path, providers=['CUDAExecutionProvider'])
         self.tcp_nodelay = True
         
@@ -66,7 +80,7 @@ class WalkPolicyInferenceNode:
         
         # Initialize history arrays
         self.obs_history = np.zeros((self.obs_history_length, self.obs_size))  # Adjust size as needed
-        self.action_history = np.zeros((self.action_history_length, len(self.joint_names)))
+        self.action_history = np.zeros((self.action_history_length, len(self.enabled_joint_idx)))
         
         # For rate logging
         self.last_rate_log_time = rospy.Time.now().to_sec()
@@ -96,17 +110,6 @@ class WalkPolicyInferenceNode:
         self.lin_vel_x_range = [-0.3, 0.5]
         self.lin_vel_y_range = [-0.3, 0.3]
         self.yaw_range = [-1.5, 1.5]
-        
-        # Joint names and masking
-        self.joint_names = [
-            "left_hip_yaw", "left_hip_roll", "left_hip_pitch", 
-            "left_knee", "left_ankle", "neck_pitch", "head_pitch", 
-            "head_yaw", "head_roll", "left_antenna", "right_antenna",
-            "right_hip_yaw", "right_hip_roll", "right_hip_pitch", "right_knee", "right_ankle"
-        ]
-        
-        self.mask_joints = ['neck_pitch', 'head_pitch', 'head_yaw', "head_roll", "left_antenna", "right_antenna"]
-        self.mask_joint_idx = np.array([self.joint_names.index(joint) for joint in self.mask_joints])
     
     def imu_callback(self, msg):
         """Process incoming IMU data."""
@@ -207,12 +210,14 @@ class WalkPolicyInferenceNode:
             self.action_history[1:, :] = self.action_history[:-1, :].copy()
             self.action_history[0, :] = actions.copy()
 
-            actions[self.mask_joint_idx] = 0.0
+            self.target_joint_states[self.enabled_joint_idx] = actions*self.power_scale
+            self.target_joint_states += self.init_pos
+
             # Publish target joint states
             joint_state_msg = JointState()
             joint_state_msg.header.stamp = rospy.Time.now()
             joint_state_msg.name = self.joint_names
-            joint_state_msg.position = (actions*self.power_scale+self.init_pos).tolist()
+            joint_state_msg.position = self.target_joint_states.tolist()
             self.target_joint_states_pub.publish(joint_state_msg)
             
             # Sleep to maintain 50Hz
