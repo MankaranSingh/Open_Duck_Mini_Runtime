@@ -13,7 +13,7 @@ from typing import Dict, List, Any, Optional
 # Import hardware interfaces
 import adafruit_bno055
 from adafruit_extended_bus import ExtendedI2C as I2C
-from mini_bdx_runtime.hwi_feetech_pypot import HWI
+from mini_bdx_runtime.rustypot_position_hwi import HWI
 from mini_bdx_runtime.rl_utils import quat_rotate_inverse
 
 from tf.transformations import (
@@ -160,10 +160,7 @@ class WalkPolicy:
         # Set KP and KD values from config
         kp_value = int(hardware_config.get("kp", 32.0))
         kd_value = int(hardware_config.get("kd", 0.0))
-                
-        self.hwi.set_kps(kp_value)
-        self.hwi.set_kds(kd_value)
-        
+                        
         print(f"Motors initialized with KP={kp_value}, KD={kd_value}")            
         # Initialize target positions with hardware's init positions
         self.target_positions = self.hwi.init_pos.copy()

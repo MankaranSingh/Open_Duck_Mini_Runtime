@@ -4,7 +4,7 @@ import rospy
 from sensor_msgs.msg import JointState
 import numpy as np
 from std_srvs.srv import Trigger, TriggerResponse
-from mini_bdx_runtime.hwi_feetech_pypot import HWI 
+from mini_bdx_runtime.rustypot_position_hwi import HWI 
 
 
 class JointController:
