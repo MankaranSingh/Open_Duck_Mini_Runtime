@@ -195,7 +195,7 @@ class WalkPolicy:
             self.imu_sensor.mode = adafruit_bno055.IMUPLUS_MODE
             time.sleep(0.2)
             
-            print(f"IMU initialized successfully on I2C bus {i2c_bus} with pitch offset {self.pitch_offset}")
+            print(f"IMU initialized successfully on I2C bus {i2c_bus}")
         except Exception as e:
             print(f"Error initializing IMU: {e}")
             self.imu_sensor = None
