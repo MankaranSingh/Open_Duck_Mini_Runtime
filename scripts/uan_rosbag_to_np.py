@@ -43,7 +43,7 @@ def extract_and_interpolate(bag_file, target_joint, dt):
     
     return data
 
-def process_bag_files(directory, target_joint, dt=0.01):
+def process_bag_files(directory, target_joint, dt=0.004):
     npy_dir = os.path.join(directory, "npy")
     os.makedirs(npy_dir, exist_ok=True)
     
@@ -61,4 +61,4 @@ if __name__ == "__main__":
     parser.add_argument("target_joint", type=int, help="target joint for which data was collected")
     args = parser.parse_args()
     
-    process_bag_files(args.directory, args.target_joint, dt=0.01)
+    process_bag_files(args.directory, args.target_joint, dt=0.004)
