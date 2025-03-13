@@ -219,6 +219,7 @@ class WalkPolicyInferenceNode:
             joint_state_msg.name = self.joint_names
             joint_state_msg.position = self.target_joint_states.tolist()
             self.target_joint_states_pub.publish(joint_state_msg)
+            self.target_joint_states[:] = 0.0
             
             # Sleep to maintain 50Hz
             rate.sleep()
