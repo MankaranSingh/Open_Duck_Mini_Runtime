@@ -47,7 +47,7 @@ class WalkPolicyInferenceNode:
         
         # Load the ONNX model
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(current_dir, '../../assets/policy_low_vel11.onnx')
+        model_path = os.path.join(current_dir, '../../assets/policy_low_vel12.onnx')
         self.model = ort.InferenceSession(model_path, providers=['CUDAExecutionProvider'])
         self.tcp_nodelay = True
         

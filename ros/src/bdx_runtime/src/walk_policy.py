@@ -46,7 +46,7 @@ class WalkPolicy:
         
         # Load the ONNX model
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(current_dir, "../assets/policy_low_vel11.onnx")
+        model_path = os.path.join(current_dir, "../assets/policy_low_vel12.onnx")
         print(f"Loading model from: {model_path}")
         self.model = ort.InferenceSession(model_path)
         
@@ -385,8 +385,9 @@ class WalkPolicy:
                     # Send commands directly as positions, no need for additional conversion
                     joint_dict = {}
                     for i, name in enumerate(self.joint_names):
-                        if name not in self.mask_joints:
-                            joint_dict[name] = joint_commands[i]
+                        if name in ["left_antenna", "right_antenna"]:
+                                continue
+                        joint_dict[name] = joint_commands[i]
                     
                     self.hwi.set_position_all(joint_dict)
             
