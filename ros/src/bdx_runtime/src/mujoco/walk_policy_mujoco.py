@@ -39,7 +39,7 @@ class WalkPolicyInferenceNode:
             "right_hip_yaw", "right_hip_roll", "right_hip_pitch", "right_knee", "right_ankle"
         ]
         
-        self.mask_joints = ['neck_pitch', 'head_pitch', 'head_yaw', "head_roll", "left_antenna", "right_antenna"]
+        self.mask_joints = ['head_pitch', 'head_yaw', "head_roll", "left_antenna", "right_antenna"]
         self.mask_joint_idx = np.array([self.joint_names.index(joint) for joint in self.mask_joints])
         self.enabled_joint_idx = np.array([i for i in range(len(self.joint_names)) if i not in self.mask_joint_idx])
 
@@ -47,7 +47,7 @@ class WalkPolicyInferenceNode:
         
         # Load the ONNX model
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(current_dir, '../../assets/policy_low_vel12.onnx')
+        model_path = os.path.join(current_dir, '../../assets/policy.onnx')
         self.model = ort.InferenceSession(model_path, providers=['CUDAExecutionProvider'])
         self.tcp_nodelay = True
         
@@ -98,10 +98,10 @@ class WalkPolicyInferenceNode:
         self.joint_pos_scale = 1.0
         self.joint_vel_scale = 1.0
         self.angular_vel_scale_obs = 1.0
-        self.angular_vel_scale = 0.25
-        self.obs_history_length = 3
-        self.action_history_length = 3
-        self.obs_size = 40
+        self.angular_vel_scale = 1.0
+        self.obs_history_length = 2
+        self.action_history_length = 2
+        self.obs_size = 38
 
         self.action_clip = [-1.5, 1.5]
         self.obs_clip = [-5.0, 5.0]
@@ -109,7 +109,7 @@ class WalkPolicyInferenceNode:
         self.power_scale = 1.0
         self.lin_vel_x_range = [-0.3, 0.5]
         self.lin_vel_y_range = [-0.3, 0.3]
-        self.yaw_range = [-1.5, 1.5]
+        self.yaw_range = [-1.0, 1.0]
     
     def imu_callback(self, msg):
         """Process incoming IMU data."""
@@ -187,7 +187,6 @@ class WalkPolicyInferenceNode:
                 (self.joint_positions-self.init_pos) * self.joint_pos_scale,
                 self.joint_velocities * self.joint_vel_scale,
                 self.angular_velocity * self.angular_vel_scale_obs,
-                self.feet_contact
             ])
             
             # Update observation history

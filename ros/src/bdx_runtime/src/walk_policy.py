@@ -31,7 +31,7 @@ class WalkPolicy:
             "right_hip_yaw", "right_hip_roll", "right_hip_pitch", "right_knee", "right_ankle"
         ]
         
-        self.mask_joints = ['neck_pitch', 'head_pitch', 'head_yaw', "head_roll", "left_antenna", "right_antenna"]
+        self.mask_joints = ['head_pitch', 'head_yaw', "head_roll", "left_antenna", "right_antenna"]
         self.mask_joint_idx = np.array([self.joint_names.index(joint) for joint in self.mask_joints])
         self.enabled_joint_idx = np.array([i for i in range(len(self.joint_names)) if i not in self.mask_joint_idx])
         
@@ -88,9 +88,9 @@ class WalkPolicy:
         self.power_scale = 1.0
         
         # History lengths
-        self.obs_history_length = 3
-        self.action_history_length = 3
-        self.obs_size = 40
+        self.obs_history_length = 2
+        self.action_history_length = 2
+        self.obs_size = 38
         
         # Command velocity limits
         self.lin_vel_x_range = [-0.3, 0.4]
@@ -318,7 +318,7 @@ class WalkPolicy:
                 (self.joint_positions-self.init_pos) * self.joint_pos_scale,
                 self.joint_velocities * self.joint_vel_scale,
                 self.angular_velocity * self.angular_vel_scale_obs,
-                self.feet_contact
+                #self.feet_contact
             ])
         
         # Update observation history
