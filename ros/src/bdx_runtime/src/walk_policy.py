@@ -114,12 +114,14 @@ class WalkPolicy:
         print("Initializing hardware interface...")
         usb_port = "/dev/ttyACM0"
         self.hwi = HWI(usb_port=usb_port)
-        
+
+        kp_value = 3.0
+        kd_value = 3.0
+
+        self.hwi.kps = np.ones(len(self.hwi.joints)) * kp_value
+        self.hwi.kds = np.ones(len(self.hwi.joints)) * kd_value
+
         self.hwi.turn_on()
-        
-        # Hardcoded KP and KD values
-        kp_value = 32.0
-        kd_value = 0.0
                         
         print(f"Motors initialized with KP={kp_value}, KD={kd_value}")            
         # Initialize target positions with hardware's init positions
