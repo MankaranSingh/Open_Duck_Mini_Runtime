@@ -3,7 +3,9 @@ from threading import Thread
 from queue import Queue
 import time
 import numpy as np
-
+import bluetooth
+from bluetooth import Protocols
+import socket
 
 X_RANGE = [-0.15, 0.15]
 Y_RANGE = [-0.2, 0.2]
@@ -17,21 +19,82 @@ HEAD_ROLL_RANGE = [-0.5, 0.5]
 
 
 class XBoxController:
-    def __init__(self, command_freq, standing=False):
+    def __init__(self, command_freq, standing=False, use_bluetooth=True, bt_port=1):
         self.command_freq = command_freq
         self.standing = standing
         self.head_control_mode = self.standing
+        self.use_bluetooth = use_bluetooth
+        self.bt_port = bt_port
+
+        # Initialize variables to store joystick data from BT
+        self.bt_l_x = 0.0
+        self.bt_l_y = 0.0
+        self.bt_r_x = 0.0
+        self.bt_btn1 = 0  # A
+        self.bt_btn2 = 0  # B
+        self.bt_btn3 = 0  # X
+        self.bt_btn4 = 0  # Y
+        self.bt_l1 = 0    # L1
+        self.bt_r1 = 0    # R1
+        self.bt_l2 = 0    # L2
+        self.bt_r2 = 0    # R2
 
         self.last_commands = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         self.last_left_trigger = 0.0
         self.last_right_trigger = 0.0
-        pygame.init()
-        self.p1 = pygame.joystick.Joystick(0)
-        self.p1.init()
-        print(f"Loaded joystick with {self.p1.get_numaxes()} axes.")
+        
+        if self.use_bluetooth:
+            # Start Bluetooth server
+            self.bt_server = bluetooth.BluetoothSocket(Protocols.RFCOMM)
+            self.bt_server.bind(("", self.bt_port))
+            self.bt_server.listen(1)
+            print(f"Waiting for Bluetooth connection on port {self.bt_port}...")
+            Thread(target=self.bluetooth_receiver, daemon=True).start()
+        else:
+            pygame.init()
+            self.p1 = pygame.joystick.Joystick(0)
+            self.p1.init()
+            print(f"Loaded joystick with {self.p1.get_numaxes()} axes.")
+            
         self.cmd_queue = Queue(maxsize=1)
-
         Thread(target=self.commands_worker, daemon=True).start()
+
+    def bluetooth_receiver(self):
+        try:
+            client_sock, client_info = self.bt_server.accept()
+            print(f"Accepted connection from {client_info}")
+            
+            while True:
+                try:
+                    data = client_sock.recv(1024).decode('utf-8').strip()
+                    if not data:
+                        continue
+                        
+                    # Parse the data format: x,y,yaw,btn1,btn2,btn3,btn4,btn_l1,btn_r1,btn_l2,btn_r2
+                    values = data.split(',')
+                    if len(values) == 11:
+                        self.bt_l_y = float(values[0])      # x in bt_sender is mapped to l_y
+                        self.bt_l_x = float(values[1])      # y in bt_sender is mapped to l_x
+                        self.bt_r_x = float(values[2])      # yaw in bt_sender is mapped to r_x
+                        self.bt_btn1 = int(values[3])       # A button
+                        self.bt_btn2 = int(values[4])       # B button
+                        self.bt_btn3 = int(values[5])       # X button
+                        self.bt_btn4 = int(values[6])       # Y button
+                        self.bt_l1 = int(values[7])         # L1 button
+                        self.bt_r1 = int(values[8])         # R1 button
+                        self.bt_l2 = int(values[9])         # L2 button
+                        self.bt_r2 = int(values[10])        # R2 button
+                except Exception as e:
+                    print(f"Error receiving data: {e}")
+                    break
+                    
+        except Exception as e:
+            print(f"Bluetooth server error: {e}")
+        finally:
+            if 'client_sock' in locals():
+                client_sock.close()
+            self.bt_server.close()
+            print("Bluetooth connection closed")
 
     def commands_worker(self):
         while True:
@@ -45,18 +108,47 @@ class XBoxController:
         left_trigger = self.last_left_trigger
         right_trigger = self.last_right_trigger
 
-        l_x = -1 * self.p1.get_axis(0)
-        l_y = -1 * self.p1.get_axis(1)
-        r_x = -1 * self.p1.get_axis(2)
-        r_y = -1 * self.p1.get_axis(3)
+        if self.use_bluetooth:
+            l_x = self.bt_l_x
+            l_y = self.bt_l_y
+            r_x = self.bt_r_x
+            
+            # Set triggers based on L2/R2 buttons
+            right_trigger = 1.0 if self.bt_r2 else 0.0
+            left_trigger = 1.0 if self.bt_l2 else 0.0
+            
+            # Check button presses
+            A_pressed = self.bt_btn1 == 1
+            X_pressed = self.bt_btn3 == 1
+            
+            # Toggle head control mode on Y button press
+            if self.bt_btn4 == 1:
+                self.head_control_mode = not self.head_control_mode
+        else:
+            l_x = -1 * self.p1.get_axis(0)
+            l_y = -1 * self.p1.get_axis(1)
+            r_x = -1 * self.p1.get_axis(2)
+            r_y = -1 * self.p1.get_axis(3)
 
-        right_trigger = np.around((self.p1.get_axis(4) + 1) / 2, 3)
-        left_trigger = np.around((self.p1.get_axis(5) + 1) / 2, 3)
+            right_trigger = np.around((self.p1.get_axis(4) + 1) / 2, 3)
+            left_trigger = np.around((self.p1.get_axis(5) + 1) / 2, 3)
 
-        if left_trigger < 0.1:
-            left_trigger = 0
-        if right_trigger < 0.1:
-            right_trigger = 0
+            if left_trigger < 0.1:
+                left_trigger = 0
+            if right_trigger < 0.1:
+                right_trigger = 0
+                
+            for event in pygame.event.get():
+                if self.p1.get_button(0):  # A button
+                    A_pressed = True
+
+                if self.p1.get_button(3):  # X button
+                    X_pressed = True
+                    
+                if self.p1.get_button(4):  # Y button
+                    self.head_control_mode = not self.head_control_mode
+
+            pygame.event.pump()  # process event queue
 
         if not self.head_control_mode:
             lin_vel_y = l_x
@@ -109,23 +201,6 @@ class XBoxController:
             last_commands[5] = head_yaw
             last_commands[6] = head_roll
 
-        for event in pygame.event.get():
-            if self.p1.get_button(0):  # A button
-                A_pressed = True
-
-            if self.p1.get_button(3):  # X button
-                X_pressed = True
-
-            # for i in range(10):
-            #     if self.p1.get_button(i):
-            #         print(f"Button {i} pressed")
-
-            if self.p1.get_button(4):  # Y button
-                self.head_control_mode = not self.head_control_mode
-
-
-        pygame.event.pump()  # process event queue
-
         return np.around(last_commands, 3), A_pressed, X_pressed, left_trigger, right_trigger
 
     def get_last_command(self):
@@ -141,7 +216,7 @@ class XBoxController:
 
 
 if __name__ == "__main__":
-    controller = XBoxController(20)
+    controller = XBoxController(50, use_bluetooth=True)
 
     while True:
         print(controller.get_last_command())
