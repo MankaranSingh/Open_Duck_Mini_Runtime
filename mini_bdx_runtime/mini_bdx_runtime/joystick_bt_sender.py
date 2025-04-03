@@ -3,7 +3,7 @@ from bluetooth import Protocols
 import pygame
 import time
 
-BT = False
+BT = True
 J1_HORIZONTAL, J1_VERTICAL = 0, 1
 J2_HORIZONTAL = 3  # Yaw rate
 
