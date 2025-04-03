@@ -1,5 +1,5 @@
 import pygame
-from threading import Thread
+from threading import Thread, Event
 from queue import Queue
 import time
 import numpy as np
@@ -42,58 +42,133 @@ class XBoxController:
         self.last_left_trigger = 0.0
         self.last_right_trigger = 0.0
         
+        # Add connection event for blocking until connected
+        self.connection_established = Event()
+        
         if self.use_bluetooth:
-            # Start Bluetooth server
-            self.bt_server = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-            self.bt_server.bind(("", self.bt_port))
-            self.bt_server.listen(1)
-            print(f"Waiting for Bluetooth connection on port {self.bt_port}...")
-            Thread(target=self.bluetooth_receiver, daemon=True).start()
+            try:
+                # Get local device information 
+                local_address = self.get_local_bt_address()
+                if local_address:
+                    print(f"Local Bluetooth address: {local_address}")
+                    print(f"Connect your joystick to this address using port {self.bt_port}")
+                
+                # Start Bluetooth server
+                self.bt_server = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+                self.bt_server.bind(("", self.bt_port))
+                self.bt_server.listen(1)
+                print(f"Bluetooth server started on port {self.bt_port}")
+                print(f"Waiting for joystick connection...")
+                Thread(target=self.bluetooth_receiver, daemon=True).start()
+            except Exception as e:
+                print(f"Failed to initialize Bluetooth: {e}")
+                print("Make sure Bluetooth is enabled on this device.")
+                print("Falling back to local joystick mode.")
+                self.use_bluetooth = False
+                self.init_local_joystick()
+                self.connection_established.set()
         else:
-            pygame.init()
-            self.p1 = pygame.joystick.Joystick(0)
-            self.p1.init()
-            print(f"Loaded joystick with {self.p1.get_numaxes()} axes.")
+            self.init_local_joystick()
+            self.connection_established.set()
             
         self.cmd_queue = Queue(maxsize=1)
         Thread(target=self.commands_worker, daemon=True).start()
 
-    def bluetooth_receiver(self):
+    def get_local_bt_address(self):
+        """Get the local Bluetooth adapter address"""
         try:
-            client_sock, client_info = self.bt_server.accept()
-            print(f"Accepted connection from {client_info}")
-            
-            while True:
-                try:
-                    data = client_sock.recv(1024).decode('utf-8').strip()
-                    if not data:
-                        continue
-                        
-                    # Parse the data format: x,y,yaw,btn1,btn2,btn3,btn4,btn_l1,btn_r1,btn_l2,btn_r2
-                    values = data.split(',')
-                    if len(values) == 11:
-                        self.bt_l_y = float(values[0])      # x in bt_sender is mapped to l_y
-                        self.bt_l_x = float(values[1])      # y in bt_sender is mapped to l_x
-                        self.bt_r_x = float(values[2])      # yaw in bt_sender is mapped to r_x
-                        self.bt_btn1 = int(values[3])       # A button
-                        self.bt_btn2 = int(values[4])       # B button
-                        self.bt_btn3 = int(values[5])       # X button
-                        self.bt_btn4 = int(values[6])       # Y button
-                        self.bt_l1 = int(values[7])         # L1 button
-                        self.bt_r1 = int(values[8])         # R1 button
-                        self.bt_l2 = int(values[9])         # L2 button
-                        self.bt_r2 = int(values[10])        # R2 button
-                except Exception as e:
-                    print(f"Error receiving data: {e}")
-                    break
-                    
+            return bluetooth.read_local_bdaddr()[0]
         except Exception as e:
-            print(f"Bluetooth server error: {e}")
-        finally:
-            if 'client_sock' in locals():
-                client_sock.close()
-            self.bt_server.close()
-            print("Bluetooth connection closed")
+            print(f"Could not get local Bluetooth address: {e}")
+            return None
+            
+    def init_local_joystick(self):
+        """Initialize local joystick"""
+        pygame.init()
+        try:
+            if pygame.joystick.get_count() > 0:
+                self.p1 = pygame.joystick.Joystick(0)
+                self.p1.init()
+                print(f"Loaded local joystick: {self.p1.get_name()} with {self.p1.get_numaxes()} axes.")
+            else:
+                print("No local joystick found.")
+                self.p1 = None
+        except Exception as e:
+            print(f"Error initializing joystick: {e}")
+            self.p1 = None
+
+    def wait_for_connection(self, timeout=None):
+        """Block until Bluetooth connection is established or timeout occurs"""
+        if self.use_bluetooth:
+            print("Waiting for Bluetooth controller connection...")
+            result = self.connection_established.wait(timeout)
+            if result:
+                print("Bluetooth controller connected!")
+                return True
+            else:
+                print(f"Bluetooth connection timeout after {timeout} seconds")
+                return False
+        return True  # If not using Bluetooth, always return True
+
+    def bluetooth_receiver(self):
+        connection_attempts = 0
+        max_silent_failures = 3
+        retry_delay = 3
+        
+        while True:
+            try:
+                print(f"Waiting for Bluetooth connection on port {self.bt_port}...")
+                client_sock, client_info = self.bt_server.accept()
+                connection_attempts = 0
+                
+                print(f"✓ Accepted connection from {client_info}")
+                # Signal that connection is established
+                self.connection_established.set()
+                
+                while True:
+                    try:
+                        data = client_sock.recv(1024).decode('utf-8').strip()
+                        if not data:
+                            continue
+                            
+                        # Parse the data format: x,y,yaw,btn1,btn2,btn3,btn4,btn_l1,btn_r1,btn_l2,btn_r2
+                        values = data.split(',')
+                        if len(values) == 11:
+                            self.bt_l_y = float(values[0])      # x in bt_sender is mapped to l_y
+                            self.bt_l_x = float(values[1])      # y in bt_sender is mapped to l_x
+                            self.bt_r_x = float(values[2])      # yaw in bt_sender is mapped to r_x
+                            self.bt_btn1 = int(values[3])       # A button
+                            self.bt_btn2 = int(values[4])       # B button
+                            self.bt_btn3 = int(values[5])       # X button
+                            self.bt_btn4 = int(values[6])       # Y button
+                            self.bt_l1 = int(values[7])         # L1 button
+                            self.bt_r1 = int(values[8])         # R1 button
+                            self.bt_l2 = int(values[9])         # L2 button
+                            self.bt_r2 = int(values[10])        # R2 button
+                    except Exception as e:
+                        print(f"Error receiving data: {e}")
+                        break
+                        
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                connection_attempts += 1
+                if connection_attempts <= max_silent_failures:
+                    print(f"Bluetooth connection attempt {connection_attempts} failed: {e}")
+                    print(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                else:
+                    print(f"Failed to establish Bluetooth connection after {connection_attempts} attempts")
+                    print("Make sure the joystick_bt_sender is running and connecting to the correct address")
+                    time.sleep(30)  # Wait longer between batches of attempts
+                    connection_attempts = 0  # Reset counter for next batch
+                
+            finally:
+                if 'client_sock' in locals():
+                    client_sock.close()
+                # Reset connection flag if disconnected
+                self.connection_established.clear()
+                print("Bluetooth connection closed. Waiting for new connection...")
 
     def commands_worker(self):
         while True:
@@ -216,7 +291,12 @@ class XBoxController:
 
 if __name__ == "__main__":
     controller = XBoxController(50, use_bluetooth=True)
-
+    
+    print("Waiting for controller connection...")
+    controller.wait_for_connection(timeout=60)
+    
+    print("Starting main loop...")
     while True:
-        print(controller.get_last_command())
-        time.sleep(0.05)
+        cmd, a, x, lt, rt = controller.get_last_command()
+        status = "Connected" if controller.connection_established.is_set() else "Disconnected"
+        print(f"[
