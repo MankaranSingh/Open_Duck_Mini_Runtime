@@ -49,6 +49,7 @@ class RLWalk:
         replay_obs=None,
         standing=False,
         cutoff_frequency=None,
+        bt_port=1
     ):
         self.commands = commands
         self.pitch_bias = pitch_bias
@@ -126,8 +127,15 @@ class RLWalk:
         #self.antennas = Antennas()
 
         self.command_freq = 20  # hz
+        self.bt_port = bt_port
         if self.commands:
-            self.xbox_controller = XBoxController(self.command_freq, self.standing)
+            # Explicitly enable Bluetooth and specify port
+            self.xbox_controller = XBoxController(
+                self.command_freq, 
+                self.standing, 
+                use_bluetooth=True, 
+                bt_port=self.bt_port
+            )
 
         if not self.standing:
             self.PRM = PolyReferenceMotion("./polynomial_coefficients.pkl")
@@ -357,6 +365,7 @@ if __name__ == "__main__":
     parser.add_argument("--replay_obs", type=str, required=False, default=None)
     parser.add_argument("--standing", action="store_true", default=False)
     parser.add_argument("--cutoff_frequency", type=float, default=None)
+    parser.add_argument("--bt_port", type=int, default=1, help="Bluetooth port for controller connection")
     args = parser.parse_args()
     pid = [args.p, args.i, args.d]
 
@@ -371,6 +380,7 @@ if __name__ == "__main__":
         replay_obs=args.replay_obs,
         standing=args.standing,
         cutoff_frequency=args.cutoff_frequency,
+        bt_port=args.bt_port,
     )
     print("Done instantiating RLWalk")
     # rl_walk.start()
