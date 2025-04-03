@@ -10,10 +10,10 @@ from mini_bdx_runtime.raw_imu import Imu
 from mini_bdx_runtime.poly_reference_motion import PolyReferenceMotion
 from mini_bdx_runtime.xbox_controller import XBoxController
 from mini_bdx_runtime.feet_contacts import FeetContacts
-from mini_bdx_runtime.eyes import Eyes
-from mini_bdx_runtime.sounds import Sounds
-from mini_bdx_runtime.antennas import Antennas
-from mini_bdx_runtime.projector import Projector
+#from mini_bdx_runtime.eyes import Eyes
+#from mini_bdx_runtime.sounds import Sounds
+#from mini_bdx_runtime.antennas import Antennas
+#from mini_bdx_runtime.projector import Projector
 from mini_bdx_runtime.rl_utils import make_action_dict, LowPassActionFilter
 
 joints_order = [
@@ -86,8 +86,8 @@ class RLWalk:
             upside_down=False,
         )
 
-        self.eyes = Eyes()
-        self.projector = Projector()
+        #self.eyes = Eyes()
+        #self.projector = Projector()
 
         self.feet_contacts = FeetContacts()
 
@@ -122,8 +122,8 @@ class RLWalk:
 
         self.paused = False
 
-        self.sounds = Sounds(volume=1.0, sound_directory="../mini_bdx_runtime/assets/")
-        self.antennas = Antennas()
+        #self.sounds = Sounds(volume=1.0, sound_directory="../mini_bdx_runtime/assets/")
+        #self.antennas = Antennas()
 
         self.command_freq = 20  # hz
         if self.commands:
@@ -230,12 +230,12 @@ class RLWalk:
                         right_trigger,
                     ) = self.xbox_controller.get_last_command()
 
-                if X_pressed:
-                    self.sounds.play_random_sound()
-                    self.projector.switch()
+                # if X_pressed:
+                #     #self.sounds.play_random_sound()
+                #     self.projector.switch()
 
-                self.antennas.set_position_left(right_trigger)
-                self.antennas.set_position_right(left_trigger)
+                #self.antennas.set_position_left(right_trigger)
+                #self.antennas.set_position_right(left_trigger)
 
                 if A_pressed and not self.paused:
                     self.paused = True
