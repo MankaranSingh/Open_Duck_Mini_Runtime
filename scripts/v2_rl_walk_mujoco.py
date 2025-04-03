@@ -49,7 +49,9 @@ class RLWalk:
         replay_obs=None,
         standing=False,
         cutoff_frequency=None,
-        bt_port=1
+        bt_port=1,
+        wait_for_bt=True,
+        bt_timeout=60
     ):
         self.commands = commands
         self.pitch_bias = pitch_bias
@@ -127,15 +129,21 @@ class RLWalk:
         #self.antennas = Antennas()
 
         self.command_freq = 20  # hz
-        self.bt_port = bt_port
         if self.commands:
-            # Explicitly enable Bluetooth and specify port
+            # Initialize controller with Bluetooth support
             self.xbox_controller = XBoxController(
                 self.command_freq, 
                 self.standing, 
                 use_bluetooth=True, 
                 bt_port=self.bt_port
             )
+            
+            # Wait for Bluetooth connection if requested
+            if self.wait_for_bt:
+                if not self.xbox_controller.wait_for_connection(timeout=self.bt_timeout):
+                    print("Warning: Starting without Bluetooth controller")
+                else:
+                    print("Bluetooth controller connected, proceeding with initialization")
 
         if not self.standing:
             self.PRM = PolyReferenceMotion("./polynomial_coefficients.pkl")
@@ -366,6 +374,10 @@ if __name__ == "__main__":
     parser.add_argument("--standing", action="store_true", default=False)
     parser.add_argument("--cutoff_frequency", type=float, default=None)
     parser.add_argument("--bt_port", type=int, default=1, help="Bluetooth port for controller connection")
+    parser.add_argument("--wait_for_bt", action="store_true", default=True, 
+                        help="Wait for Bluetooth connection before starting")
+    parser.add_argument("--bt_timeout", type=int, default=60, 
+                        help="Timeout in seconds for waiting for Bluetooth connection")
     args = parser.parse_args()
     pid = [args.p, args.i, args.d]
 
@@ -381,6 +393,8 @@ if __name__ == "__main__":
         standing=args.standing,
         cutoff_frequency=args.cutoff_frequency,
         bt_port=args.bt_port,
+        wait_for_bt=args.wait_for_bt,
+        bt_timeout=args.bt_timeout,
     )
     print("Done instantiating RLWalk")
     # rl_walk.start()
