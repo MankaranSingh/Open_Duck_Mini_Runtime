@@ -36,24 +36,14 @@ class Imu:
         # self.imu.mode = adafruit_bno055.NDOF_MODE
         # self.imu.mode = adafruit_bno055.NDOF_FMC_OFF_MODE
 
-        if upside_down:
-            self.imu.axis_remap = (
-                adafruit_bno055.AXIS_REMAP_Y,
-                adafruit_bno055.AXIS_REMAP_X,
-                adafruit_bno055.AXIS_REMAP_Z,
-                adafruit_bno055.AXIS_REMAP_NEGATIVE,
-                adafruit_bno055.AXIS_REMAP_NEGATIVE,
-                adafruit_bno055.AXIS_REMAP_NEGATIVE,
-            )
-        else:
-            self.imu.axis_remap = (
-                adafruit_bno055.AXIS_REMAP_Y,
-                adafruit_bno055.AXIS_REMAP_X,
-                adafruit_bno055.AXIS_REMAP_Z,
-                adafruit_bno055.AXIS_REMAP_NEGATIVE,
-                adafruit_bno055.AXIS_REMAP_POSITIVE,
-                adafruit_bno055.AXIS_REMAP_POSITIVE,
-            )
+        self.imu.axis_remap = (
+            adafruit_bno055.AXIS_REMAP_Y,        # X (Forward) now maps to physical Y
+            adafruit_bno055.AXIS_REMAP_X,        # Y (Right) now maps to physical X
+            adafruit_bno055.AXIS_REMAP_Z,        # Z (Up) remains Z
+            adafruit_bno055.AXIS_REMAP_POSITIVE, # X (new) keeps positive
+            adafruit_bno055.AXIS_REMAP_NEGATIVE, # Y (new) must be inverted
+            adafruit_bno055.AXIS_REMAP_POSITIVE  # Z (new) keeps positive
+        )
 
         self.pitch_bias = self.nominal_pitch_bias + self.user_pitch_bias
 
