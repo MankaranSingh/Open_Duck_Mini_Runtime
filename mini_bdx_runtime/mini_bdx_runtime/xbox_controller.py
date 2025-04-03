@@ -4,7 +4,6 @@ from queue import Queue
 import time
 import numpy as np
 import bluetooth
-from bluetooth import Protocols
 import socket
 
 X_RANGE = [-0.15, 0.15]
@@ -45,7 +44,7 @@ class XBoxController:
         
         if self.use_bluetooth:
             # Start Bluetooth server
-            self.bt_server = bluetooth.BluetoothSocket(Protocols.RFCOMM)
+            self.bt_server = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
             self.bt_server.bind(("", self.bt_port))
             self.bt_server.listen(1)
             print(f"Waiting for Bluetooth connection on port {self.bt_port}...")
