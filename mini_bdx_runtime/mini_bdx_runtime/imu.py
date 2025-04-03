@@ -1,4 +1,5 @@
 import adafruit_bno055
+from adafruit_extended_bus import ExtendedI2C as I2C
 import board
 import busio
 import numpy as np
@@ -26,7 +27,7 @@ class Imu:
         # self.uart = serial.Serial("/dev/ttyS0", baudrate=9600)
         # self.imu = adafruit_bno055.BNO055_UART(self.uart)
 
-        i2c = busio.I2C(board.SCL, board.SDA)
+        i2c = I2C(3)
         self.imu = adafruit_bno055.BNO055_I2C(i2c)
 
         self.imu.mode = adafruit_bno055.IMUPLUS_MODE
