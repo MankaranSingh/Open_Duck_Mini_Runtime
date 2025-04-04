@@ -299,4 +299,3 @@ if __name__ == "__main__":
     while True:
         cmd, a, x, lt, rt = controller.get_last_command()
         status = "Connected" if controller.connection_established.is_set() else "Disconnected"
-        print(f"[
