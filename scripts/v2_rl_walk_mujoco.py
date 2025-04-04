@@ -97,6 +97,11 @@ class RLWalk:
         # Scales
         self.action_scale = action_scale
 
+        self.obs_history_len = 3
+        self.obs_per_step = 45
+
+        self.obs_history = np.zeros((self.obs_history_len * self.obs_per_step))
+
         self.last_action = np.zeros(self.num_dofs)
         self.last_last_action = np.zeros(self.num_dofs)
         self.last_last_last_action = np.zeros(self.num_dofs)
@@ -149,6 +154,8 @@ class RLWalk:
             self.PRM = PolyReferenceMotion("./polynomial_coefficients.pkl")
             self.imitation_i = 0
             self.imitation_phase = np.array([0, 0])
+            self.phase_active = True
+            self.waiting_for_zero = False
 
     def add_fake_head(self, pos):
         # add just the antennas now
@@ -201,11 +208,11 @@ class RLWalk:
                 # projected_gravity,
                 cmds,
                 dof_pos - self.init_pos,
-                dof_vel * 0.05,
+                # dof_vel * 0.05,
                 self.last_action,
-                self.last_last_action,
-                self.last_last_last_action,
-                self.motor_targets,
+                # self.last_last_action,
+                # self.last_last_last_action,
+                # self.motor_targets,
                 feet_contacts,
                 # ref,
                 # [self.imitation_i],
@@ -246,9 +253,16 @@ class RLWalk:
                         right_trigger,
                     ) = self.xbox_controller.get_last_command()
 
-                # if X_pressed:
-                #     #self.sounds.play_random_sound()
-                #     self.projector.switch()
+                # Handle X button for phase stopping
+                if X_pressed and not self.standing:
+                    if self.phase_active:
+                        self.phase_active = False
+                        self.waiting_for_zero = True
+                        print("Phase advancement will stop at zero")
+                    else:
+                        self.phase_active = True
+                        self.waiting_for_zero = False
+                        print("Phase advancement enabled")
 
                 #self.antennas.set_position_left(right_trigger)
                 #self.antennas.set_position_right(left_trigger)
@@ -268,9 +282,21 @@ class RLWalk:
                 if obs is None:
                     continue
 
+                self.obs_history = np.roll(self.obs_history, self.obs_per_step)
+                self.obs_history[:self.obs_per_step] = obs
+
                 if not self.standing:
-                    self.imitation_i += 1
-                    self.imitation_i = self.imitation_i % self.PRM.nb_steps_in_period
+                    # Update phase only if active or waiting to reach zero
+                    if self.phase_active or self.waiting_for_zero:
+                        self.imitation_i += 1
+                        self.imitation_i = self.imitation_i % self.PRM.nb_steps_in_period
+                        
+                        # If we're waiting for zero and we've reached it, stop phase advancement
+                        if self.waiting_for_zero and self.imitation_i < 1:
+                            self.imitation_i = 0
+                            self.waiting_for_zero = False
+                            print("Phase advancement stopped at zero")
+                            
                     self.imitation_phase = np.array(
                         [
                             np.cos(
