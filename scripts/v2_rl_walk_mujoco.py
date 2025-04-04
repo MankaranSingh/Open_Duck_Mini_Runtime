@@ -135,12 +135,12 @@ class RLWalk:
                 self.command_freq, 
                 self.standing, 
                 use_bluetooth=True, 
-                bt_port=self.bt_port
+                bt_port=1
             )
             
             # Wait for Bluetooth connection if requested
-            if self.wait_for_bt:
-                if not self.xbox_controller.wait_for_connection(timeout=self.bt_timeout):
+            if 1:
+                if not self.xbox_controller.wait_for_connection(timeout=60):
                     print("Warning: Starting without Bluetooth controller")
                 else:
                     print("Bluetooth controller connected, proceeding with initialization")
