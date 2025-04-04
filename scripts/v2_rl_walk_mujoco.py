@@ -284,6 +284,7 @@ class RLWalk:
 
                 self.obs_history = np.roll(self.obs_history, self.obs_per_step)
                 self.obs_history[:self.obs_per_step] = obs
+                obs = self.obs_history
 
                 if not self.standing:
                     # Update phase only if active or waiting to reach zero
