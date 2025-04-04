@@ -1,6 +1,7 @@
 import bluetooth
 import pygame
 import time
+from bluetooth import Protocols
 import sys
 import argparse
 
@@ -82,7 +83,7 @@ def send_controller_data(target_mac, bt_port=1, retry_delay=5, max_retries=10):
     while not connected and retries < max_retries:
         try:
             print(f"Attempt {retries+1}/{max_retries}: Connecting to {target_mac} on port {bt_port}...")
-            sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+            sock = bluetooth.BluetoothSocket(Protocols.RFCOMM)
             sock.connect((target_mac, bt_port))
             connected = True
             print(f"✓ Connected to {target_mac}")
