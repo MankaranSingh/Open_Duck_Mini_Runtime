@@ -38,8 +38,6 @@ hwi.set_position_all(hwi.zero_pos)
 time.sleep(1)
 try:
     for i, joint_name in enumerate(hwi.joints.keys()):
-        if "neck" not in joint_name:
-            continue
         joint_id = hwi.joints[joint_name]
         ok = False
         while not ok:
