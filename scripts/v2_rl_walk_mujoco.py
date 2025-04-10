@@ -49,9 +49,6 @@ class RLWalk:
         replay_obs=None,
         standing=False,
         cutoff_frequency=None,
-        bt_port=1,
-        wait_for_bt=True,
-        bt_timeout=60
     ):
         self.commands = commands
         self.pitch_bias = pitch_bias
@@ -278,7 +275,7 @@ class RLWalk:
                     command_norm = np.linalg.norm(velocity_commands)
                     
                     # Activate/deactivate phase based on command norm
-                    if command_norm < 0.01:
+                    if command_norm < 0.05:
                         if self.phase_active:
                             self.phase_active = False
                             self.waiting_for_zero = True
