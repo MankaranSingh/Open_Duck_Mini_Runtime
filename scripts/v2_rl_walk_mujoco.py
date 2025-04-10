@@ -94,9 +94,9 @@ class RLWalk:
         # Scales
         self.action_scale = action_scale
 
-        self.proprioceptive_history_len = 3
+        self.proprioceptive_history_len = 4
 
-        self.proprioceptive_history = np.zeros((self.proprioceptive_history_len * 28))
+        self.proprioceptive_history = np.zeros((self.proprioceptive_history_len * 14*3))
 
         self.last_action = np.zeros(self.num_dofs)
         self.last_last_action = np.zeros(self.num_dofs)
@@ -201,11 +201,12 @@ class RLWalk:
             [
                 dof_pos - self.init_pos,
                 dof_vel * 0.05,
+                self.last_action,
             ]
         )
 
-        self.proprioceptive_history = np.roll(self.proprioceptive_history, 28)
-        self.proprioceptive_history[:28] = proprioceptive_obs
+        self.proprioceptive_history = np.roll(self.proprioceptive_history, 14*3)
+        self.proprioceptive_history[:14*3] = proprioceptive_obs
 
         obs = np.concatenate(
             [
@@ -214,7 +215,6 @@ class RLWalk:
                 imu_data["accelero"],
                 # projected_gravity,
                 cmds,
-                self.last_action,
                 # self.last_last_action,
                 # self.last_last_last_action,
                 # self.motor_targets,
