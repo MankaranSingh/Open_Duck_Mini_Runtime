@@ -97,10 +97,9 @@ class RLWalk:
         # Scales
         self.action_scale = action_scale
 
-        self.obs_history_len = 5
-        self.obs_per_step = 45
+        self.proprioceptive_history_len = 3
 
-        self.obs_history = np.zeros((self.obs_history_len * self.obs_per_step))
+        self.proprioceptive_history = np.zeros((self.proprioceptive_history_len * 28))
 
         self.last_action = np.zeros(self.num_dofs)
         self.last_last_action = np.zeros(self.num_dofs)
@@ -201,14 +200,23 @@ class RLWalk:
         # else:
         #     ref = np.array([])
 
+        proprioceptive_obs = np.concatenate(
+            [
+                dof_pos - self.init_pos,
+                dof_vel * 0.05,
+            ]
+        )
+
+        self.proprioceptive_history = np.roll(self.proprioceptive_history, 28)
+        self.proprioceptive_history[:28] = proprioceptive_obs
+
         obs = np.concatenate(
             [
+                self.proprioceptive_history,
                 imu_data["gyro"],
                 imu_data["accelero"],
                 # projected_gravity,
                 cmds,
-                dof_pos - self.init_pos,
-                # dof_vel * 0.05,
                 self.last_action,
                 # self.last_last_action,
                 # self.last_last_last_action,
@@ -264,6 +272,22 @@ class RLWalk:
                         self.waiting_for_zero = False
                         print("Phase advancement enabled")
 
+                # Command-based phase control (similar to mujoco_infer.py)
+                if not self.standing and self.commands:
+                    velocity_commands = self.last_commands[:3]  # Only use velocity components
+                    command_norm = np.linalg.norm(velocity_commands)
+                    
+                    # Activate/deactivate phase based on command norm
+                    if command_norm < 0.01:
+                        if self.phase_active:
+                            self.phase_active = False
+                            self.waiting_for_zero = True
+                            print("Phase advancement paused - waiting for zero")
+                    else:
+                        if not self.phase_active and not self.waiting_for_zero:
+                            self.phase_active = True
+                            print("Phase advancement enabled")
+
                 #self.antennas.set_position_left(right_trigger)
                 #self.antennas.set_position_right(left_trigger)
 
@@ -281,10 +305,6 @@ class RLWalk:
                 obs = self.get_obs()
                 if obs is None:
                     continue
-
-                self.obs_history = np.roll(self.obs_history, self.obs_per_step)
-                self.obs_history[:self.obs_per_step] = obs
-                obs = self.obs_history
 
                 if not self.standing:
                     # Update phase only if active or waiting to reach zero
