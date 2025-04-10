@@ -417,11 +417,6 @@ if __name__ == "__main__":
     parser.add_argument("--replay_obs", type=str, required=False, default=None)
     parser.add_argument("--standing", action="store_true", default=False)
     parser.add_argument("--cutoff_frequency", type=float, default=None)
-    parser.add_argument("--bt_port", type=int, default=1, help="Bluetooth port for controller connection")
-    parser.add_argument("--wait_for_bt", action="store_true", default=True, 
-                        help="Wait for Bluetooth connection before starting")
-    parser.add_argument("--bt_timeout", type=int, default=60, 
-                        help="Timeout in seconds for waiting for Bluetooth connection")
     args = parser.parse_args()
     pid = [args.p, args.i, args.d]
 
@@ -436,9 +431,6 @@ if __name__ == "__main__":
         replay_obs=args.replay_obs,
         standing=args.standing,
         cutoff_frequency=args.cutoff_frequency,
-        bt_port=args.bt_port,
-        wait_for_bt=args.wait_for_bt,
-        bt_timeout=args.bt_timeout,
     )
     print("Done instantiating RLWalk")
     # rl_walk.start()
