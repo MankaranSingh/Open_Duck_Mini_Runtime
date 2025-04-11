@@ -57,7 +57,7 @@ class RLWalk:
         self.policy = OnnxInfer(self.onnx_model_path, awd=True)
 
         self.num_dofs = 14
-        self.max_motor_velocity = 4.8  # rad/s
+        self.max_motor_velocity = 5.5  # rad/s
 
         # Control
         self.control_freq = control_freq
