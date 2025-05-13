@@ -110,9 +110,9 @@ def send_controller_data(target_mac, bt_port=1, retry_delay=5, max_retries=10):
         while True:
             pygame.event.pump()  # Update joystick states
             
-            raw_x = joystick.get_axis(J1_VERTICAL)
+            raw_x = -joystick.get_axis(J1_VERTICAL)
             raw_y = joystick.get_axis(J1_HORIZONTAL)
-            raw_yaw = joystick.get_axis(J2_HORIZONTAL)
+            raw_yaw = -joystick.get_axis(J2_HORIZONTAL)
 
             # Apply first-order filter for smoother transitions
             x = round(filter_x.update(raw_x), 2)

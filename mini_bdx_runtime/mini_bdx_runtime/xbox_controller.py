@@ -11,10 +11,10 @@ Y_RANGE = [-0.2, 0.2]
 YAW_RANGE = [-1.0, 1.0]
 
 # rads
-NECK_PITCH_RANGE = [-0.34, 1.1]
-HEAD_PITCH_RANGE = [-0.78, 0.78]
-HEAD_YAW_RANGE = [-1.7, 1.7]
-HEAD_ROLL_RANGE = [-0.5, 0.5]
+NECK_PITCH_RANGE = np.array([-0.34, 1.1])/2
+HEAD_PITCH_RANGE = np.array([-0.78, 0.78])/2
+HEAD_YAW_RANGE = np.array([-1.7, 1.7])/2
+HEAD_ROLL_RANGE = np.array([-0.5, 0.5])/2
 
 
 class XBoxController:
