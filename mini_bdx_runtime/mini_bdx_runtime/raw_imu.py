@@ -1,86 +1,21 @@
-import adafruit_bno055
-from adafruit_extended_bus import ExtendedI2C as I2C
 import board
 import busio
+import adafruit_mpu6050
 import numpy as np
-import os
-import pickle
-
 from queue import Queue
 from threading import Thread
 import time
 
 
-# TODO filter spikes
 class Imu:
-    def __init__(
-        self, sampling_freq, user_pitch_bias=0, calibrate=False, upside_down=True
-    ):
+    def __init__(self, sampling_freq, user_pitch_bias=0, calibrate=False, upside_down=True):
         self.sampling_freq = sampling_freq
-        self.calibrate = calibrate
-
-        i2c = I2C(3)
-        self.imu = adafruit_bno055.BNO055_I2C(i2c)
-
-        # self.imu.mode = adafruit_bno055.IMUPLUS_MODE
-        # self.imu.mode = adafruit_bno055.ACCGYRO_MODE
-        # self.imu.mode = adafruit_bno055.GYRONLY_MODE
-        self.imu.mode = adafruit_bno055.NDOF_MODE
-        # self.imu.mode = adafruit_bno055.NDOF_FMC_OFF_MODE
-
-        self.imu.axis_remap = (
-            adafruit_bno055.AXIS_REMAP_Y,        # X (Forward) now maps to physical Y
-            adafruit_bno055.AXIS_REMAP_X,        # Y (Right) now maps to physical X
-            adafruit_bno055.AXIS_REMAP_Z,        # Z (Up) remains Z
-            adafruit_bno055.AXIS_REMAP_POSITIVE, # X (new) keeps positive
-            adafruit_bno055.AXIS_REMAP_NEGATIVE, # Y (new) must be inverted
-            adafruit_bno055.AXIS_REMAP_POSITIVE  # Z (new) keeps positive
-        )
-
-        if self.calibrate:
-            self.imu.mode = adafruit_bno055.NDOF_MODE
-            calibrated = self.imu.calibrated
-            while not calibrated:
-                print("Calibration status: ", self.imu.calibration_status)
-                print("Calibrated : ", self.imu.calibrated)
-                calibrated = self.imu.calibrated
-                time.sleep(0.1)
-            print("CALIBRATION DONE")
-            offsets_accelerometer = self.imu.offsets_accelerometer
-            offsets_gyroscope = self.imu.offsets_gyroscope
-            offsets_magnetometer = self.imu.offsets_magnetometer
-
-            imu_calib_data = {
-                "offsets_accelerometer": offsets_accelerometer,
-                "offsets_gyroscope": offsets_gyroscope,
-                "offsets_magnetometer": offsets_magnetometer,
-            }
-            for k, v in imu_calib_data.items():
-                print(k, v)
-
-            pickle.dump(imu_calib_data, open("imu_calib_data.pkl", "wb"))
-
-            print("Saved", "imu_calib_data.pkl")
-            exit()
-
-        if os.path.exists("imu_calib_data.pkl"):
-            imu_calib_data = pickle.load(open("imu_calib_data.pkl", "rb"))
-            self.imu.mode = adafruit_bno055.CONFIG_MODE
-            time.sleep(0.1)
-            self.imu.offsets_accelerometer = imu_calib_data["offsets_accelerometer"]
-            self.imu.offsets_gyroscope = imu_calib_data["offsets_gyroscope"]
-            self.imu.offsets_magnetometer = imu_calib_data["offsets_magnetometer"]
-            self.imu.mode = adafruit_bno055.NDOF_MODE
-            time.sleep(0.1)
-        else:
-            print("imu_calib_data.pkl not found")
-            print("Imu is running uncalibrated")
-
         self.x_offset = 0
 
-        # self.tare_x()
+        # Initialize I2C and MPU6050
+        i2c = busio.I2C(board.SCL, board.SDA)
+        self.imu = adafruit_mpu6050.MPU6050(i2c)
 
-        self.last_imu_data = [0, 0, 0, 0]
         self.last_imu_data = {
             "gyro": [0, 0, 0],
             "accelero": [0, 0, 0],
@@ -95,7 +30,6 @@ class Imu:
         ok = False
         while not ok:
             x_values.append(np.array(self.imu.acceleration)[0])
-
             x_values = x_values[-num_values:]
 
             if len(x_values) == num_values:
@@ -128,6 +62,12 @@ class Imu:
 
             accelero[0] -= self.x_offset
 
+            accelero[1] *= -1
+            accelero[2] *= -1
+
+            gyro[1] *= -1
+            gyro[2] *= -1
+
             data = {
                 "gyro": gyro,
                 "accelero": accelero,
@@ -139,7 +79,7 @@ class Imu:
 
     def get_data(self):
         try:
-            self.last_imu_data = self.imu_queue.get(False)  # non blocking
+            self.last_imu_data = self.imu_queue.get(False)
         except Exception:
             pass
 
@@ -150,7 +90,6 @@ if __name__ == "__main__":
     imu = Imu(50, upside_down=False)
     while True:
         data = imu.get_data()
-        # print(data)
         print("gyro", np.around(data["gyro"], 3))
         print("accelero", np.around(data["accelero"], 3))
         print("---")
