@@ -10,7 +10,7 @@ from mini_bdx_runtime.raw_imu import Imu
 from mini_bdx_runtime.poly_reference_motion import PolyReferenceMotion
 from mini_bdx_runtime.xbox_controller import XBoxController
 from mini_bdx_runtime.feet_contacts import FeetContacts
-from mini_bdx_runtime.eyes import Eyes
+#from mini_bdx_runtime.eyes import Eyes
 #from mini_bdx_runtime.sounds import Sounds
 #from mini_bdx_runtime.antennas import Antennas
 #from mini_bdx_runtime.projector import Projector
@@ -42,7 +42,7 @@ class RLWalk:
         onnx_model_path: str,
         serial_port: str = "/dev/ttyACM0",
         control_freq: float = 50,
-        pid=[32, 0, 32],
+        pid=[32, 0, 0],
         action_scale=0.25,
         commands=False,
         pitch_bias=0,
@@ -373,7 +373,7 @@ class RLWalk:
                         self.motor_targets = filtered_motor_targets
 
                 self.prev_motor_targets = self.motor_targets.copy()
-                self.motor_targets[5:9] = self.last_commands[3:]
+                # self.motor_targets[5:9] = self.last_commands[3:]
 
                 action_dict = make_action_dict(self.motor_targets, joints_order)
 

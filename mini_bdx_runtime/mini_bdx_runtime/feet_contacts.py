@@ -2,8 +2,8 @@ import RPi.GPIO as GPIO
 import numpy as np
 
 
-LEFT_FOOT_PIN = 6
-RIGHT_FOOT_PIN = 5
+LEFT_FOOT_PIN = 22
+RIGHT_FOOT_PIN = 27
 
 
 class FeetContacts:
