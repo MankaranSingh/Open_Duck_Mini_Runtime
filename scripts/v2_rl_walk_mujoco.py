@@ -1,240 +1,185 @@
+import os
 import time
-import pickle
-
 import numpy as np
 
 from mini_bdx_runtime.rustypot_position_hwi import HWI
-from mini_bdx_runtime.onnx_infer import OnnxInfer
-
 from mini_bdx_runtime.raw_imu import Imu
-from mini_bdx_runtime.poly_reference_motion import PolyReferenceMotion
 from mini_bdx_runtime.xbox_controller import XBoxController
 from mini_bdx_runtime.feet_contacts import FeetContacts
 #from mini_bdx_runtime.eyes import Eyes
 #from mini_bdx_runtime.sounds import Sounds
 #from mini_bdx_runtime.antennas import Antennas
 #from mini_bdx_runtime.projector import Projector
-from mini_bdx_runtime.rl_utils import make_action_dict, LowPassActionFilter
-
-joints_order = [
-    "left_hip_yaw",
-    "left_hip_roll",
-    "left_hip_pitch",
-    "left_knee",
-    "left_ankle",
-    "neck_pitch",
-    "head_pitch",
-    "head_yaw",
-    "head_roll",
-    # "left_antenna",
-    # "right_antenna",
-    "right_hip_yaw",
-    "right_hip_roll",
-    "right_hip_pitch",
-    "right_knee",
-    "right_ankle",
-]
+from mini_bdx_runtime.common import mini2_constants, dino_constants
+from mini_bdx_runtime.common.policies import JoystickPolicy, StandingPolicy, EpisodicPolicy
 
 
 class RLWalk:
     def __init__(
         self,
-        onnx_model_path: str,
         serial_port: str = "/dev/ttyACM0",
         control_freq: float = 50,
-        pid=[32, 0, 0],
-        action_scale=0.25,
-        commands=False,
-        pitch_bias=0,
-        replay_obs=None,
-        standing=False,
-        cutoff_frequency=None,
+        pid=[20, 0, 0],
+        robot="dino",
+        initial_policy_type="standing"
     ):
-        self.commands = commands
-        self.pitch_bias = pitch_bias
-
-        self.onnx_model_path = onnx_model_path
-        self.policy = OnnxInfer(self.onnx_model_path, awd=True)
-
-        self.num_dofs = 14
-        self.max_motor_velocity = 4.8  # rad/s
 
         # Control
         self.control_freq = control_freq
         self.pid = pid
-
-        self.saved_obs = []
-
-        self.replay_obs = replay_obs
-        if self.replay_obs is not None:
-            self.replay_obs = pickle.load(open(self.replay_obs, "rb"))
-
-        self.standing = standing
-
-        self.action_filter = None
-        if cutoff_frequency is not None:
-            self.action_filter = LowPassActionFilter(
-                self.control_freq, cutoff_frequency
-            )
+        self.constants = eval(f"{robot}_constants")
 
         self.hwi = HWI(serial_port)
+        self.imu = Imu(sampling_freq=int(self.control_freq),)
+        self.feet_contacts = FeetContacts()
+
+        # get current script path
+        DATA_PATH = os.path.join("../mini_bdx_runtime/data", os.path.dirname(os.path.abspath(__file__)))
+
+        # Define hardcoded paths for models
+        self.model_paths = {
+            "episodic": f"{DATA_PATH}/{robot}/models/{robot}_checkpoint_episodic_happy_dance.onnx",
+            "joystick": f"{DATA_PATH}/{robot}/models/{robot}_checkpoint_joystick.onnx",
+            "standing": f"{DATA_PATH}/{robot}/models/{robot}_checkpoint_standing.onnx",
+        }
+        
+        self.reference_paths = {
+            "episodic": f"{DATA_PATH}/{robot}/happy_dance.json",
+        }
+       
+        # Initialize all policies 
+        print("Loading all policies...")
+        self.policies = {
+            "joystick": JoystickPolicy(self.constants, self.model_paths["joystick"]),
+            "standing": StandingPolicy(self.constants, self.model_paths["standing"]),
+            "episodic": EpisodicPolicy(self.constants, self.model_paths["episodic"], self.reference_paths["episodic"])
+        }
+        
+        # Set initial active policy
+        self.active_policy_type = initial_policy_type
+        self.policy = self.policies[self.active_policy_type]
+        print(f"Initial active policy: {self.active_policy_type}")
+        
+        # Policy switching variables
+        self.switch_pending = False
+        self.target_policy_type = None
+        self.switch_start_time = 0
+        self.original_commands = None
+        
+        # Set decimation for all policies (how often to update)
+        self.decimation = 1  # Default to 1 for real robot (no need for decimation)
+        for policy in self.policies.values():
+            if hasattr(policy, "decimation"):
+                policy.decimation = self.decimation
+
+        # Initialize commands
+        self.commands = self.policy.get_default_commands()
+        self.saved_obs = []
+
         self.start()
-
-        self.imu = Imu(
-            sampling_freq=int(self.control_freq),
-            user_pitch_bias=self.pitch_bias,
-            upside_down=False,
-        )
-
+        
+        # Expression package
+        #self.sounds = Sounds(volume=1.0, sound_directory="../mini_bdx_runtime/assets/")
+        #self.antennas = Antennas()
         #self.eyes = Eyes()
         #self.projector = Projector()
 
-        self.feet_contacts = FeetContacts()
+        self.xbox_controller = XBoxController()
+        if not self.xbox_controller.wait_for_connection(timeout=60):
+            print("Warning: Starting without Bluetooth controller")
+            self.use_controller = False
+        else:
+            print("Bluetooth controller connected, proceeding with initialization")
+            self.use_controller = True
 
-        # Scales
-        self.action_scale = action_scale
-
-        self.proprioceptive_history_len = 4
-
-        self.proprioceptive_history = np.zeros((self.proprioceptive_history_len * 14*3))
-
-        self.last_action = np.zeros(self.num_dofs)
-        self.last_last_action = np.zeros(self.num_dofs)
-        self.last_last_last_action = np.zeros(self.num_dofs)
-
-        self.init_pos = [
-            0.002,
-            0.053,
-            -0.63,
-            1.368,
-            -0.784,
-            0,
-            0,
-            0,
-            0,
-            -0.003,
-            -0.065,
-            0.635,
-            1.379,
-            -0.796,
-        ]
-
-        self.motor_targets = np.array(self.init_pos.copy())
-        self.prev_motor_targets = np.array(self.init_pos.copy())
-
-        self.last_commands = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-
-        self.paused = False
-
-        #self.sounds = Sounds(volume=1.0, sound_directory="../mini_bdx_runtime/assets/")
-        #self.antennas = Antennas()
-
-        self.command_freq = 20  # hz
-        if self.commands:
-            # Initialize controller with Bluetooth support
-            self.xbox_controller = XBoxController(
-                self.command_freq, 
-                self.standing, 
-                use_bluetooth=True, 
-                bt_port=1
-            )
+    def request_policy_switch(self, new_policy_type):
+        """Request a policy switch with specific requirements for each policy"""
+        if new_policy_type == self.active_policy_type or self.switch_pending:
+            return
             
-            # Wait for Bluetooth connection if requested
-            if 1:
-                if not self.xbox_controller.wait_for_connection(timeout=60):
-                    print("Warning: Starting without Bluetooth controller")
-                else:
-                    print("Bluetooth controller connected, proceeding with initialization")
+        print(f"Requesting switch from {self.active_policy_type} to {new_policy_type} policy")
+        self.target_policy_type = new_policy_type
+        self.switch_pending = True
+        
+        # Handle standing policy switch specially - need to set commands to 0 and wait
+        if self.active_policy_type == "standing":
+            print("Standing policy: setting commands to 0 and waiting 0.5s")
+            self.original_commands = self.commands.copy()
+            self.commands = np.zeros_like(self.commands)
+            self.switch_start_time = time.time()
+        
+    def check_switch_conditions(self):
+        """Check if conditions are met to complete the policy switch"""
+        if not self.switch_pending:
+            return
+            
+        # For standing policy, we just need to wait 0.5 seconds
+        if self.active_policy_type == "standing":
+            if time.time() - self.switch_start_time >= 0.5:
+                self.complete_policy_switch()
+                return
+                
+        # For joystick policy, we need to check if phase is at 0
+        elif self.active_policy_type == "joystick":
+            if self.policy.imitation_i == 0 or self.policy.imitation_i < 5:  # Allow small tolerance
+                self.complete_policy_switch()
+                return
+                
+        # For episodic policy, we need to check if imitation_i is at 0
+        elif self.active_policy_type == "episodic":
+            if self.policy.imitation_i == 0 or self.policy.imitation_i < 5:  # Allow small tolerance
+                self.complete_policy_switch()
+                return
+       
+    def complete_policy_switch(self):
+        """Complete the policy switch once conditions are met"""
+        print(f"Switching from {self.active_policy_type} to {self.target_policy_type} policy")
+        self.active_policy_type = self.target_policy_type
+        self.policy = self.policies[self.target_policy_type]
+        self.policy.reset()
+        self.commands = self.policy.get_default_commands()
+        
+        # Reset switching state
+        self.switch_pending = False
+        self.target_policy_type = None
+        self.switch_start_time = 0
+        self.original_commands = None
 
-        if not self.standing:
-            self.PRM = PolyReferenceMotion("./polynomial_coefficients.pkl")
-            self.imitation_i = 0
-            self.imitation_phase = np.array([0, 0])
-            self.phase_active = True
-            self.waiting_for_zero = False
-
-    def add_fake_head(self, pos):
-        # add just the antennas now
-        assert len(pos) == self.num_dofs
-        pos_with_head = np.insert(pos, 9, [0, 0])
-        return np.array(pos_with_head)
-
-    def get_obs(self):
-
+    def get_sensors(self):
+        joint_angles = self.hwi.get_present_positions()
+        joint_vel = self.hwi.get_present_velocities()  # rad/s
         imu_data = self.imu.get_data()
+        accelerometer = imu_data["accel"]
+        gyro = imu_data["gyro"]
+        contacts = self.feet_contacts.get()
 
-        dof_pos = self.hwi.get_present_positions(
-            ignore=[
-                "left_antenna",
-                "right_antenna",
-            ]
-        )  # rad
-
-        dof_vel = self.hwi.get_present_velocities(
-            ignore=[
-                "left_antenna",
-                "right_antenna",
-            ]
-        )  # rad/s
-
-        if len(dof_pos) != self.num_dofs:
-            print(f"ERROR len(dof_pos) != {self.num_dofs}")
-            return None
-
-        if len(dof_vel) != self.num_dofs:
-            print(f"ERROR len(dof_vel) != {self.num_dofs}")
-            return None
-
-        # projected_gravity = quat_rotate_inverse(orientation_quat, [0, 0, -1])
-        # projected_gravity = np.array(imu_mat).reshape((3, 3)).T @ np.array([0, 0, -1])
-
-        cmds = self.last_commands
-
-        feet_contacts = self.feet_contacts.get()
-
-        # if not self.standing:
-        #     ref = self.PRM.get_reference_motion(*cmds[:3], self.imitation_i)
-        # else:
-        #     ref = np.array([])
-
-        proprioceptive_obs = np.concatenate(
-            [
-                dof_pos - self.init_pos,
-                dof_vel * 0.05,
-                self.last_action,
-            ]
-        )
-
-        self.proprioceptive_history = np.roll(self.proprioceptive_history, 14*3)
-        self.proprioceptive_history[:14*3] = proprioceptive_obs
-
-        obs = np.concatenate(
-            [
-                self.proprioceptive_history,
-                imu_data["gyro"],
-                imu_data["accelero"],
-                # projected_gravity,
-                cmds,
-                # self.last_last_action,
-                # self.last_last_last_action,
-                # self.motor_targets,
-                feet_contacts,
-                # ref,
-                # [self.imitation_i],
-                self.imitation_phase,
-            ]
-        )
-
-        return obs
+        return joint_angles, joint_vel, accelerometer, gyro, contacts
+    
+    def process_controller_input(self):
+        """Process controller input to update commands"""
+        if not self.use_controller or self.switch_pending:
+            return
+            
+        # Get controller stick values
+        stick_vals = self.xbox_controller.get_sticks()
+        buttons = self.xbox_controller.get_buttons()
+        
+        # Check for policy switch buttons
+        if buttons[0]: 
+            self.request_policy_switch("joystick")
+        elif buttons[1]: 
+            self.request_policy_switch("standing")
+        elif buttons[2]:  
+            self.request_policy_switch("episodic")
+            
+        self.commands = self.policy.joystick_to_commands(stick_vals)
 
     def start(self):
-        kps = [self.pid[0]] * 14
-        kds = [self.pid[2]] * 14
-
-        self.hwi.set_kps(kps)
-        self.hwi.set_kds(kds)
+        kp = [self.pid[0]]
+        kd = [self.pid[2]]
+        self.hwi.set_kps(kp)
+        self.hwi.set_kds(kd)
         self.hwi.turn_on()
-
         time.sleep(2)
 
     def run(self):
@@ -243,146 +188,38 @@ class RLWalk:
             print("Starting")
             start_t = time.time()
             while True:
-                A_pressed = False
-                X_pressed = False
-                left_trigger = 0
-                right_trigger = 0
                 t = time.time()
-
-                if self.commands:
-                    (
-                        self.last_commands,
-                        A_pressed,
-                        X_pressed,
-                        left_trigger,
-                        right_trigger,
-                    ) = self.xbox_controller.get_last_command()
-
-                # Handle X button for phase stopping
-                if X_pressed and not self.standing:
-                    if self.phase_active:
-                        self.phase_active = False
-                        self.waiting_for_zero = True
-                        print("Phase advancement will stop at zero")
-                    else:
-                        self.phase_active = True
-                        self.waiting_for_zero = False
-                        print("Phase advancement enabled")
-
-                # Command-based phase control (similar to mujoco_infer.py)
-                if not self.standing and self.commands:
-                    velocity_commands = self.last_commands[:3]  # Only use velocity components
-                    command_norm = np.linalg.norm(velocity_commands)
-                    
-                    # Activate/deactivate phase based on command norm
-                    if command_norm < 0.05:
-                        if self.phase_active:
-                            self.phase_active = False
-                            self.waiting_for_zero = True
-                            print("Phase advancement paused - waiting for zero")
-                    else:
-                        if not self.phase_active and not self.waiting_for_zero:
-                            self.phase_active = True
-                            print("Phase advancement enabled")
-
-                #self.antennas.set_position_left(right_trigger)
-                #self.antennas.set_position_right(left_trigger)
-
-                if A_pressed and not self.paused:
-                    self.paused = True
-                    print("PAUSE")
-                elif A_pressed and self.paused:
-                    self.paused = False
-                    print("UNPAUSE")
-
-                if self.paused:
-                    time.sleep(0.1)
-                    continue
-
-                obs = self.get_obs()
-                if obs is None:
-                    continue
-
-                if not self.standing:
-                    # Update phase only if active or waiting to reach zero
-                    if self.phase_active or self.waiting_for_zero:
-                        self.imitation_i += 1
-                        self.imitation_i = self.imitation_i % self.PRM.nb_steps_in_period
-                        
-                        # If we're waiting for zero and we've reached it, stop phase advancement
-                        if self.waiting_for_zero and self.imitation_i < 1:
-                            self.imitation_i = 0
-                            self.waiting_for_zero = False
-                            print("Phase advancement stopped at zero")
-                            
-                    self.imitation_phase = np.array(
-                        [
-                            np.cos(
-                                self.imitation_i
-                                / self.PRM.nb_steps_in_period
-                                * 2
-                                * np.pi
-                            ),
-                            np.sin(
-                                self.imitation_i
-                                / self.PRM.nb_steps_in_period
-                                * 2
-                                * np.pi
-                            ),
-                        ]
-                    )
-
-                self.saved_obs.append(obs)
-
-                if self.replay_obs is not None:
-                    if i < len(self.replay_obs):
-                        obs = self.replay_obs[i]
-                    else:
-                        print("BREAKING ")
-                        break
-
-                # obs = np.clip(obs, -100, 100)
-
-                action = self.policy.infer(obs)
-
-                # action = np.clip(action, -1, 1)
-
-                self.last_last_last_action = self.last_last_action.copy()
-                self.last_last_action = self.last_action.copy()
-                self.last_action = action.copy()
-
-                # action = np.zeros(10)
-
-                # robot_action = self.init_pos + action * self.action_scale
-                self.motor_targets = self.init_pos + action * self.action_scale
-
-                self.motor_targets = np.clip(
-                    self.motor_targets,
-                    self.prev_motor_targets
-                    - self.max_motor_velocity * (1 / self.control_freq),  # control dt
-                    self.prev_motor_targets
-                    + self.max_motor_velocity * (1 / self.control_freq),  # control dt
+                
+                # Process controller input
+                self.process_controller_input()
+                
+                # Check if we need to complete a policy switch
+                if self.switch_pending:
+                    self.check_switch_conditions()
+                
+                # Get sensor data
+                joint_angles, joint_vel, accelerometer, gyro, contacts = self.get_sensors()
+                
+                # Use the policy to get motor commands
+                motor_targets = self.policy.infer(
+                    joint_angles, 
+                    joint_vel, 
+                    accelerometer, 
+                    gyro, 
+                    contacts,
+                    self.commands
                 )
-
-                if self.action_filter is not None:
-                    self.action_filter.push(self.motor_targets)
-                    filtered_motor_targets = self.action_filter.get_filtered_action()
-                    if (
-                        time.time() - start_t > 1
-                    ):  # give time to the filter to stabilize
-                        self.motor_targets = filtered_motor_targets
-
-                self.prev_motor_targets = self.motor_targets.copy()
-                # self.motor_targets[5:9] = self.last_commands[3:]
-
-                action_dict = make_action_dict(self.motor_targets, joints_order)
-
+                
+                # Create joint dictionary for hardware interface
+                joint_names = self.constants.JOINTS_ORDER
+                action_dict = {joint_names[i]: motor_targets[i] for i in range(len(motor_targets))}
+                
+                # Send commands to hardware
                 self.hwi.set_position_all(action_dict)
 
                 i += 1
 
                 took = time.time() - t
-                # print("Full loop took", took, "fps : ", np.around(1 / took, 2))
                 if (1 / self.control_freq - took) < 0:
                     print(
                         "Policy control budget exceeded by",
@@ -393,45 +230,37 @@ class RLWalk:
         except KeyboardInterrupt:
             pass
 
-        pickle.dump(self.saved_obs, open("robot_saved_obs.pkl", "wb"))
-        print("TURNING OFF")
-
-
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--onnx_model_path", type=str, required=True)
-    parser.add_argument("-a", "--action_scale", type=float, default=0.25)
     parser.add_argument("-p", type=int, default=32)
     parser.add_argument("-i", type=int, default=0)
     parser.add_argument("-d", type=int, default=0)
     parser.add_argument("-c", "--control_freq", type=int, default=50)
-    parser.add_argument("--pitch_bias", type=float, default=0, help="deg")
     parser.add_argument(
-        "--commands",
-        action="store_true",
-        default=False,
-        help="external commands, keyboard or gamepad. Launch control_server.py on host computer",
+        "--robot",
+        type=str,
+        default="mini2",
+        choices=["mini2", "dino"],
+        help="Robot type to use for the simulation.",
     )
-    parser.add_argument("--replay_obs", type=str, required=False, default=None)
-    parser.add_argument("--standing", action="store_true", default=False)
-    parser.add_argument("--cutoff_frequency", type=float, default=None)
+    parser.add_argument(
+        "--policy_type", 
+        type=str, 
+        default="standing", 
+        choices=["episodic", "joystick", "standing"],
+        help="Initial policy to use (episodic, joystick, standing)"
+    )
+
     args = parser.parse_args()
     pid = [args.p, args.i, args.d]
 
     print("Done parsing args")
     rl_walk = RLWalk(
-        args.onnx_model_path,
-        action_scale=args.action_scale,
-        pid=pid,
         control_freq=args.control_freq,
-        commands=args.commands,
-        pitch_bias=args.pitch_bias,
-        replay_obs=args.replay_obs,
-        standing=args.standing,
-        cutoff_frequency=args.cutoff_frequency,
+        pid=pid,
+        robot=args.robot,
+        initial_policy_type=args.policy_type
     )
-    print("Done instantiating RLWalk")
-    # rl_walk.start()
     rl_walk.run()

@@ -66,7 +66,7 @@ class HWI:
             for joint, pos in self.init_pos.items()
         }
 
-        self.kps = np.ones(len(self.joints)) * 32  # default kp
+        self.kps = np.ones(len(self.joints)) * 22  # default kp
         self.kds = np.ones(len(self.joints)) * 0  # default kd
         self.low_torque_kps = np.ones(len(self.joints)) * 2
 
@@ -170,25 +170,11 @@ class HWI:
         #     present_velocities = np.deg2rad(present_velocities)  # rad/s
         return np.array(np.around(present_velocities, 3))
 
-    # def get_present_voltages(self):
-    #     return np.array(self.control.io.get_present_voltage(self.joints.values())) * 0.1
-
-    # def get_present_velocities(self, rad_s=True):
-    #     """
-    #     Returns the present velocities in rad/s (default) or rev/min
-    #     """
-    #     # rev/min
-    #     present_velocities = np.array(
-    #         self.control.io.get_present_speed(self.joints.values())
-    #     )
-    #     if rad_s:
-    #         present_velocities = (2 * np.pi * present_velocities) / 60  # rad/s
-    #     return np.array(np.around(present_velocities, 3))
+    def get_present_voltages(self):
+        return np.array(self.control.io.get_present_voltage(self.joints.values())) * 0.1
 
 if __name__ == "__main__":
     hwi = HWI()
-    hwi.set_kp(np.ones(len(hwi.joints)) * 1)
+    hwi.set_kps(np.ones(len(hwi.joints)) * 1)
 
-    print(hwi.get_present_positions())
-
-    
+    hwi.set_position_all(hwi.init_pos)

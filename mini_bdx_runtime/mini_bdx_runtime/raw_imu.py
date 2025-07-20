@@ -8,7 +8,7 @@ import time
 
 
 class Imu:
-    def __init__(self, sampling_freq, user_pitch_bias=0, calibrate=False, upside_down=True):
+    def __init__(self, sampling_freq):
         self.sampling_freq = sampling_freq
         self.x_offset = 0
 
@@ -18,7 +18,7 @@ class Imu:
 
         self.last_imu_data = {
             "gyro": [0, 0, 0],
-            "accelero": [0, 0, 0],
+            "accel": [0, 0, 0],
         }
         self.imu_queue = Queue(maxsize=1)
         Thread(target=self.imu_worker, daemon=True).start()
@@ -70,7 +70,7 @@ class Imu:
 
             data = {
                 "gyro": gyro,
-                "accelero": accelero,
+                "accel": accelero,
             }
 
             self.imu_queue.put(data)
@@ -91,6 +91,6 @@ if __name__ == "__main__":
     while True:
         data = imu.get_data()
         print("gyro", np.around(data["gyro"], 3))
-        print("accelero", np.around(data["accelero"], 3))
+        print("accel", np.around(data["accel"], 3))
         print("---")
         time.sleep(1 / 25)

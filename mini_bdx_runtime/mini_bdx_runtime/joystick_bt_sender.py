@@ -7,7 +7,7 @@ import argparse
 
 BT = True
 J1_HORIZONTAL, J1_VERTICAL = 0, 1
-J2_HORIZONTAL = 3  # Yaw rate
+J2_HORIZONTAL, J2_VERTICAL = 3, 2  # Yaw rate
 
 # Button IDs - adjust these values based on your specific controller
 BTN_1 = 0
@@ -72,9 +72,10 @@ def send_controller_data(target_mac, bt_port=1, retry_delay=5, max_retries=10):
     joystick = init_joystick()
 
     # Create filters for each axis
-    filter_x = FirstOrderFilter(0.0, RC, DT)
-    filter_y = FirstOrderFilter(0.0, RC, DT)
-    filter_yaw = FirstOrderFilter(0.0, RC, DT)
+    filter_lv = FirstOrderFilter(0.0, RC, DT)
+    filter_lh = FirstOrderFilter(0.0, RC, DT)
+    filter_rv = FirstOrderFilter(0.0, RC, DT)
+    filter_rh = FirstOrderFilter(0.0, RC, DT)
 
     retries = 0
     connected = False
@@ -110,14 +111,16 @@ def send_controller_data(target_mac, bt_port=1, retry_delay=5, max_retries=10):
         while True:
             pygame.event.pump()  # Update joystick states
             
-            raw_x = -joystick.get_axis(J1_VERTICAL)
-            raw_y = joystick.get_axis(J1_HORIZONTAL)
-            raw_yaw = -joystick.get_axis(J2_HORIZONTAL)
+            lv = joystick.get_axis(J1_VERTICAL)
+            lh = joystick.get_axis(J1_HORIZONTAL)
+            rv = joystick.get_axis(J2_VERTICAL)
+            rh = joystick.get_axis(J2_HORIZONTAL)
 
             # Apply first-order filter for smoother transitions
-            x = round(filter_x.update(raw_x), 2)
-            y = round(filter_y.update(raw_y), 2)
-            yaw = round(filter_yaw.update(raw_yaw), 2)
+            lv = round(filter_lv.update(lv), 2)
+            lh = round(filter_lh.update(lh), 2)
+            rv = round(filter_rv.update(rv), 2)
+            rh = round(filter_rh.update(rh), 2)
 
             # Read button states (1 for pressed, 0 for not pressed)
             btn1 = int(joystick.get_button(BTN_1))
@@ -130,7 +133,7 @@ def send_controller_data(target_mac, bt_port=1, retry_delay=5, max_retries=10):
             btn_r2 = int(joystick.get_button(BTN_R2))
 
             # Include button states in the message
-            message = f"{x},{y},{yaw},{btn1},{btn2},{btn3},{btn4},{btn_l1},{btn_r1},{btn_l2},{btn_r2}\n"
+            message = f"{lv},{lh},{rv},{rh},{btn1},{btn2},{btn3},{btn4},{btn_l1},{btn_r1},{btn_l2},{btn_r2}\n"
             
             if connected:
                 sock.send(message.encode()) 
