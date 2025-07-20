@@ -121,13 +121,13 @@ class RLWalk:
                 
         # For joystick policy, we need to check if phase is at 0
         elif self.active_policy_type == "joystick":
-            if self.policy.imitation_i == 0 or self.policy.imitation_i < 5:  # Allow small tolerance
+            if self.policy.imitation_i == 0:  # Allow small tolerance
                 self.complete_policy_switch()
                 return
                 
         # For episodic policy, we need to check if imitation_i is at 0
         elif self.active_policy_type == "episodic":
-            if self.policy.imitation_i == 0 or self.policy.imitation_i < 5:  # Allow small tolerance
+            if self.policy.imitation_i == 0:  # Allow small tolerance
                 self.complete_policy_switch()
                 return
        
