@@ -215,7 +215,7 @@ class RLWalk:
                 action_dict = {joint_names[i]: motor_targets[i] for i in range(len(motor_targets))}
                 
                 # Send commands to hardware
-                self.hwi.set_position_all(action_dict)
+                # self.hwi.set_position_all(action_dict)
 
                 i += 1
 

@@ -114,12 +114,6 @@ class JoystickPolicy:
         lin_vel_y = np.interp(lin_vel_y_input, [-1, 1], self.COMMANDS_RANGE_Y)
         ang_vel = np.interp(ang_vel_input, [-1, 1], self.COMMANDS_RANGE_THETA)
 
-        # Apply a small deadzone to prevent drift when joystick is near center
-        deadzone = 0.05
-        lin_vel_x = 0 if abs(lin_vel_x_input) < deadzone else lin_vel_x
-        lin_vel_y = 0 if abs(lin_vel_y_input) < deadzone else lin_vel_y
-        ang_vel = 0 if abs(ang_vel_input) < deadzone else ang_vel
-
         return np.array([lin_vel_x, lin_vel_y, ang_vel])
     
     def key_to_commands(self, keycode):                    
