@@ -34,7 +34,7 @@ class RLWalk:
         self.feet_contacts = FeetContacts()
 
         # get current script path
-        DATA_PATH = os.path.join("../mini_bdx_runtime/data", os.path.dirname(os.path.abspath(__file__)))
+        DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../mini_bdx_runtime/data")
 
         # Define hardcoded paths for models
         self.model_paths = {
