@@ -1,35 +1,4 @@
-# Copyright 2025 DeepMind Technologies Limited
-# Copyright 2025 Antoine Pirrone - Steve Nguyen
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
-"""Constants for Open Duck Mini V2. (based on Berkeley Humanoid)"""
-
-from etils import epath
 import numpy as np
-
-
-ROOT_PATH = epath.Path(__file__).parent
-ASSETS_PATH = ROOT_PATH / "robots" / "dino"
-FLAT_TERRAIN_XML = ASSETS_PATH / "dino.mjcf"
-URDF = ASSETS_PATH / "dino.urdf"
-
-
-def task_to_xml(task_name: str) -> epath.Path:
-    return {
-        "flat_terrain": FLAT_TERRAIN_XML
-    }[task_name]
-
 
 FEET_SITES = [
     "left_foot",

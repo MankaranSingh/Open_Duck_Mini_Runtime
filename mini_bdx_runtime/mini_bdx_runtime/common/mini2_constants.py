@@ -1,41 +1,4 @@
-# Copyright 2025 DeepMind Technologies Limited
-# Copyright 2025 Antoine Pirrone - Steve Nguyen
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
-"""Constants for Open Duck Mini V2. (based on Berkeley Humanoid)"""
-
-from etils import epath
 import numpy as np
-
-
-ROOT_PATH = epath.Path(__file__).parent
-ASSETS_PATH = ROOT_PATH / "robots" / "mini2"
-FLAT_TERRAIN_XML = ASSETS_PATH / "scene_flat_terrain.xml"
-ROUGH_TERRAIN_XML = ASSETS_PATH / "scene_rough_terrain.xml"
-FLAT_TERRAIN_BACKLASH_XML = ASSETS_PATH / "scene_flat_terrain_backlash.xml"
-ROUGH_TERRAIN_BACKLASH_XML = ASSETS_PATH / "scene_rough_terrain_backlash.xml"
-URDF = ROOT_PATH / "urdf" / "mini2_bdx" / "mini2_bdx.urdf"
-
-
-def task_to_xml(task_name: str) -> epath.Path:
-    return {
-        "flat_terrain": FLAT_TERRAIN_XML,
-        "rough_terrain": ROUGH_TERRAIN_XML,
-        "flat_terrain_backlash": FLAT_TERRAIN_BACKLASH_XML,
-        "rough_terrain_backlash": ROUGH_TERRAIN_BACKLASH_XML,
-    }[task_name]
-
 
 FEET_SITES = [
     "left_foot",
