@@ -175,10 +175,10 @@ class RLWalk:
         self.commands = self.policy.joystick_to_commands(stick_vals)
 
     def start(self):
-        kp = [self.pid[0]]
-        kd = [self.pid[2]]
-        self.hwi.set_kps(kp)
-        self.hwi.set_kds(kd)
+        kps = [self.pid[0]] * len(self.constants.JOINTS_ORDER)
+        kds = [self.pid[2]] * len(self.constants.JOINTS_ORDER)
+        self.hwi.set_kps(kps)
+        self.hwi.set_kds(kds)
         self.hwi.turn_on()
         time.sleep(2)
 
@@ -234,7 +234,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", type=int, default=32)
+    parser.add_argument("-p", type=int, default=22)
     parser.add_argument("-i", type=int, default=0)
     parser.add_argument("-d", type=int, default=0)
     parser.add_argument("-c", "--control_freq", type=int, default=50)
