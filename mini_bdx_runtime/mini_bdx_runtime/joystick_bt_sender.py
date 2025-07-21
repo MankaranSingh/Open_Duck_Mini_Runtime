@@ -164,7 +164,7 @@ if __name__ == "__main__":
         sys.exit(0)
         
     if not args.mac:
-        rpi_mac_address = "B8:27:EB:16:C4:AE"  # Default MAC address
+        rpi_mac_address = "B8:27:EB:BE:1D:BB"  # Default MAC address
         print(f"No MAC address specified, using default: {rpi_mac_address}")
         print("To specify a MAC address, use: --mac XX:XX:XX:XX:XX:XX")
         print("To scan for available devices, use: --scan")

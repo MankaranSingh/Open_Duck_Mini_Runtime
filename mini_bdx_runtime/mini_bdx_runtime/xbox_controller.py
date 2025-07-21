@@ -31,11 +31,7 @@ class XBoxController:
         self._setup_bluetooth()
                     
     def _setup_bluetooth(self):
-        """Set up Bluetooth server"""
-        local_address = bluetooth.read_local_bdaddr()[0]
-        print(f"Local Bluetooth address: {local_address}")
-        print(f"Connect your joystick to this address using port {self.bt_port}")
-        
+        """Set up Bluetooth server"""        
         self.bt_server = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
         self.bt_server.bind(("", self.bt_port))
         self.bt_server.listen(1)
