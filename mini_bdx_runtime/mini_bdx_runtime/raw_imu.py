@@ -62,12 +62,6 @@ class Imu:
 
             accelero[0] -= self.x_offset
 
-            accelero[1] *= -1
-            accelero[2] *= -1
-
-            gyro[1] *= -1
-            gyro[2] *= -1
-
             data = {
                 "gyro": gyro,
                 "accel": accelero,
@@ -87,7 +81,7 @@ class Imu:
 
 
 if __name__ == "__main__":
-    imu = Imu(50, upside_down=False)
+    imu = Imu(50)
     while True:
         data = imu.get_data()
         print("gyro", np.around(data["gyro"], 3))
