@@ -5,6 +5,7 @@ from mini_bdx_runtime.common.episodic_loader import EpisodicLoader
 from mini_bdx_runtime.common.gait_blending import gait_sample_data, gait_sample_data_med_only, vel_to_step, blend_gait_parameters
 
 DECIMATION = 1
+CUTOFF_FREQ = 70
 
 class JoystickPolicy:
     """Policy that uses joystick input to control the robot"""
@@ -192,14 +193,14 @@ class StandingPolicy:
         self.linearVelocityScale = 1.0
         self.angularVelocityScale = 1.0
         self.dof_pos_scale = 1.0
-        self.dof_vel_scale = 0.25
-        self.action_scale = 0.5
+        self.dof_vel_scale = 0.1
+        self.action_scale = 0.25
         self.proprioceptive_history_length = 4
         self.proprioceptive_obs_size = 2*len(constants.JOINTS_ORDER) + self.action_size
         self.obs_factor = 10
         
         self.proprioceptive_history = np.zeros(self.proprioceptive_history_length*self.proprioceptive_obs_size)
-        self.action_filter = LowPassActionFilter(50, cutoff_frequency=37.5)
+        self.action_filter = LowPassActionFilter(50, cutoff_frequency=CUTOFF_FREQ)
         
         self.last_action = np.zeros(self.action_size)
         self.full_action = np.zeros(len(constants.JOINTS_ORDER))
@@ -312,7 +313,7 @@ class EpisodicPolicy:
         self.linearVelocityScale = 1.0
         self.angularVelocityScale = 1.0
         self.dof_pos_scale = 1.0
-        self.dof_vel_scale = 0.25
+        self.dof_vel_scale = 0.1
         self.action_scale = 0.5
         self.proprioceptive_history_length = 4
         self.proprioceptive_obs_size = 2*len(constants.JOINTS_ORDER) + self.action_size
