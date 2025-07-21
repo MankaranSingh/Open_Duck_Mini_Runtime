@@ -5,9 +5,10 @@ from bluetooth import Protocols
 import sys
 import argparse
 
-BT = True
+# Joystick axis constants
 J1_HORIZONTAL, J1_VERTICAL = 0, 1
-J2_HORIZONTAL, J2_VERTICAL = 3, 2  # Yaw rate
+J2_HORIZONTAL = 3  # Yaw rate
+J2_VERTICAL = 4    # Pitch control axis
 
 # Button IDs - adjust these values based on your specific controller
 BTN_1 = 0
