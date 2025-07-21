@@ -215,16 +215,13 @@ class RLWalk:
                 action_dict = {joint_names[i]: motor_targets[i] for i in range(len(motor_targets))}
                 
                 # Send commands to hardware
-                # self.hwi.set_position_all(action_dict)
+                self.hwi.set_position_all(action_dict)
 
                 i += 1
 
                 took = time.time() - t
                 if (1 / self.control_freq - took) < 0:
-                    print(
-                        "Policy control budget exceeded by",
-                        np.around(took - 1 / self.control_freq, 3),
-                    )
+                    print("Policy control budget exceeded by", np.around(took - 1 / self.control_freq, 3),)
                 time.sleep(max(0, 1 / self.control_freq - took))
 
         except KeyboardInterrupt:

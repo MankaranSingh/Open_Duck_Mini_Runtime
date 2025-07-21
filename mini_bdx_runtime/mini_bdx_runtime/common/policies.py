@@ -4,6 +4,7 @@ from mini_bdx_runtime.common.utils import LowPassActionFilter
 from mini_bdx_runtime.common.episodic_loader import EpisodicLoader
 from mini_bdx_runtime.common.gait_blending import gait_sample_data, gait_sample_data_med_only, vel_to_step, blend_gait_parameters
 
+DECIMATION = 1
 
 class JoystickPolicy:
     """Policy that uses joystick input to control the robot"""
@@ -11,7 +12,7 @@ class JoystickPolicy:
     def __init__(self, constants, onnx_model_path=None):
         super().__init__()
         
-        self.decimation = 10
+        self.decimation = DECIMATION
 
         # Control ranges - kept for reference to guide command generation
         self.COMMANDS_RANGE_X = [-0.1, 0.15]
@@ -170,28 +171,14 @@ class JoystickPolicy:
 
         self.last_action = action.copy()
 
-        motor_targets = (
-                            self.default_actuator + self.full_action * self.action_scale
-                        )
-
-        motor_targets = np.clip(
-            motor_targets,
-            self.prev_motor_targets
-            - self.max_motor_velocity
-            * (0.002 * self.decimation),
-            self.prev_motor_targets
-            + self.max_motor_velocity
-            * (0.002 * self.decimation),
-        )
-        self.prev_motor_targets = motor_targets.copy()
-
+        motor_targets = (self.default_actuator + self.full_action * self.action_scale)
         return motor_targets
 
 class StandingPolicy:
     """Policy for controlling the robot in standing mode"""
     
     def __init__(self, constants, onnx_model_path):
-        self.decimation = 10
+        self.decimation = DECIMATION
         # Control ranges
         self.HEIGHT_DELTA_RANGE = [-0.01, 0.01]
         self.ROLL_DELTA_RANGE = [-np.radians(10), np.radians(10)]
@@ -310,13 +297,6 @@ class StandingPolicy:
         
         motor_targets = self.default_actuator + self.full_action * self.action_scale
         
-        # Apply motor velocity limits
-        motor_targets = np.clip(
-            motor_targets,
-            self.prev_motor_targets - self.max_motor_velocity * (0.002 * self.decimation),
-            self.prev_motor_targets + self.max_motor_velocity * (0.002 * self.decimation),
-        )
-        
         self.prev_motor_targets = motor_targets.copy()
         return motor_targets
 
@@ -350,7 +330,7 @@ class EpisodicPolicy:
         self.default_actuator = constants.DEFAULT_ACTUATOR_POS.copy()
 
         self.max_motor_velocity = 5.24  # rad/s
-        self.decimation = 10
+        self.decimation = DECIMATION
         
         # Initialize ONNX model
         self.model = OnnxInfer(onnx_model_path, awd=True)
@@ -408,13 +388,6 @@ class EpisodicPolicy:
         self.last_action = action.copy()
         
         motor_targets = self.default_actuator + action * self.action_scale
-        
-        # Apply motor velocity limits
-        motor_targets = np.clip(
-            motor_targets,
-            self.prev_motor_targets - self.max_motor_velocity * (0.002 * self.decimation),
-            self.prev_motor_targets + self.max_motor_velocity * (0.002 * self.decimation),
-        )
-        
+                
         self.prev_motor_targets = motor_targets.copy()
         return motor_targets
