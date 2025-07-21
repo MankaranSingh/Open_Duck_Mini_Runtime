@@ -1,6 +1,5 @@
 import numpy as np
 import json
-import jax.numpy as jnp
 
 class EpisodicLoader:
     def __init__(self, motion_file_path):
@@ -37,7 +36,7 @@ class EpisodicLoader:
         print("[EpisodicLoader] Created slices:", self.slices)
         
         # Store the full motion data
-        self.motion_data = jnp.array(_Y)
+        self.motion_data = np.array(_Y)
     
     def get_reference_motion(self, frame_index):
         """
