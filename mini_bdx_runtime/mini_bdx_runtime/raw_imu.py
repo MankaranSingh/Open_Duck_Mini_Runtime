@@ -20,8 +20,6 @@ class Imu:
             "gyro": [0, 0, 0],
             "accel": [0, 0, 0],
         }
-        self.imu_queue = Queue(maxsize=1)
-        Thread(target=self.imu_worker, daemon=True).start()
 
     def tare_x(self):
         print("Taring x ...")
@@ -44,39 +42,13 @@ class Imu:
 
             time.sleep(0.01)
 
-    def imu_worker(self):
-        while True:
-            s = time.time()
-            try:
-                gyro = np.array(self.imu.gyro).copy()
-                accelero = np.array(self.imu.acceleration).copy()
-            except Exception as e:
-                print("[IMU]:", e)
-                continue
-
-            if gyro is None or accelero is None:
-                continue
-
-            if gyro.any() is None or accelero.any() is None:
-                continue
-
-            accelero[0] -= self.x_offset
-
-            data = {
+    def get_data(self):
+        gyro = np.array(self.imu.gyro)
+        accelero = np.array(self.imu.acceleration)
+        self.last_imu_data = {
                 "gyro": gyro,
                 "accel": accelero,
             }
-
-            self.imu_queue.put(data)
-            took = time.time() - s
-            time.sleep(max(0, 1 / self.sampling_freq - took))
-
-    def get_data(self):
-        try:
-            self.last_imu_data = self.imu_queue.get(False)
-        except Exception:
-            pass
-
         return self.last_imu_data
 
 
