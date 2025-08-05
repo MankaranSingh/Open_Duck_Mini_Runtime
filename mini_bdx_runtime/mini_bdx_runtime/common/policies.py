@@ -1,11 +1,9 @@
 import numpy as np
 from mini_bdx_runtime.common.onnx_infer import OnnxInfer
-from mini_bdx_runtime.common.utils import LowPassActionFilter
 from mini_bdx_runtime.common.episodic_loader import EpisodicLoader
 from mini_bdx_runtime.common.gait_blending import gait_sample_data, gait_sample_data_med_only, vel_to_step, blend_gait_parameters
 
 DECIMATION = 1
-CUTOFF_FREQ = 70
 
 class JoystickPolicy:
     """Policy that uses joystick input to control the robot"""
@@ -30,7 +28,7 @@ class JoystickPolicy:
         self.linearVelocityScale = 1.0
         self.angularVelocityScale = 1.0
         self.dof_pos_scale = 1.0
-        self.dof_vel_scale = 0.2
+        self.dof_vel_scale = 0.1
         self.action_scale = 0.25
         self.proprioceptive_history_length = 4
         self.proprioceptive_obs_size = 2*len(constants.JOINTS_ORDER) + self.action_size
@@ -116,6 +114,12 @@ class JoystickPolicy:
         lin_vel_y = np.interp(lin_vel_y_input, [-1, 1], self.COMMANDS_RANGE_Y)
         ang_vel = np.interp(ang_vel_input, [-1, 1], self.COMMANDS_RANGE_THETA)
 
+        # Apply a small deadzone to prevent drift when joystick is near center
+        deadzone = 0.05
+        lin_vel_x = 0 if abs(lin_vel_x_input) < deadzone else lin_vel_x
+        lin_vel_y = 0 if abs(lin_vel_y_input) < deadzone else lin_vel_y
+        ang_vel = 0 if abs(ang_vel_input) < deadzone else ang_vel
+
         return np.array([lin_vel_x, lin_vel_y, ang_vel])
     
     def key_to_commands(self, keycode):                    
@@ -181,10 +185,10 @@ class StandingPolicy:
     def __init__(self, constants, onnx_model_path):
         self.decimation = DECIMATION
         # Control ranges
-        self.HEIGHT_DELTA_RANGE = [-0.01, 0.01]
-        self.ROLL_DELTA_RANGE = [-np.radians(10), np.radians(10)]
-        self.PITCH_DELTA_RANGE = [-np.radians(10), np.radians(10)]
-        self.YAW_DELTA_RANGE = [-np.radians(10), np.radians(10)]
+        self.HEIGHT_DELTA_RANGE = [-0.012, 0.012]
+        self.ROLL_DELTA_RANGE = [-np.radians(5), np.radians(5)]
+        self.PITCH_DELTA_RANGE = [-np.radians(5), np.radians(5)]
+        self.YAW_DELTA_RANGE = [-np.radians(5), np.radians(5)]
         
         self.action_size = len(constants.JOINTS_ORDER) - len(constants.NON_LEG_JOINTS)
         self.default_actuator = constants.DEFAULT_ACTUATOR_POS.copy()
@@ -193,14 +197,13 @@ class StandingPolicy:
         self.linearVelocityScale = 1.0
         self.angularVelocityScale = 1.0
         self.dof_pos_scale = 1.0
-        self.dof_vel_scale = 0.1
-        self.action_scale = 0.25
-        self.proprioceptive_history_length = 4
+        self.dof_vel_scale = 0.5
+        self.action_scale = 0.5
+        self.proprioceptive_history_length = 3
         self.proprioceptive_obs_size = 2*len(constants.JOINTS_ORDER) + self.action_size
-        self.obs_factor = 10
+        self.obs_factor = 1
         
         self.proprioceptive_history = np.zeros(self.proprioceptive_history_length*self.proprioceptive_obs_size)
-        self.action_filter = LowPassActionFilter(50, cutoff_frequency=CUTOFF_FREQ)
         
         self.last_action = np.zeros(self.action_size)
         self.full_action = np.zeros(len(constants.JOINTS_ORDER))
@@ -281,12 +284,27 @@ class StandingPolicy:
         
         self.proprioceptive_history = np.roll(self.proprioceptive_history, self.proprioceptive_obs_size)
         self.proprioceptive_history[:self.proprioceptive_obs_size] = proprioceptive_obs
+
+        # frame_data = np.array(self.controller.query_lookup_table_jax(commands[1], commands[2], commands[3], commands[0]))
+        
+        # Normalize command to range [-1, 1] using defined ranges
+        height_max = max(abs(self.HEIGHT_DELTA_RANGE[0]), abs(self.HEIGHT_DELTA_RANGE[1]))
+        roll_max = max(abs(self.ROLL_DELTA_RANGE[0]), abs(self.ROLL_DELTA_RANGE[1]))
+        pitch_max = max(abs(self.PITCH_DELTA_RANGE[0]), abs(self.PITCH_DELTA_RANGE[1]))
+        yaw_max = max(abs(self.YAW_DELTA_RANGE[0]), abs(self.YAW_DELTA_RANGE[1]))
+        
+        normalized_commands = np.array([
+            commands[0] / height_max,  # height_delta normalized
+            commands[1] / roll_max,    # roll_delta normalized
+            commands[2] / pitch_max,   # pitch_delta normalized
+            commands[3] / yaw_max,     # yaw_delta normalized
+        ])
         
         obs = np.concatenate([
             self.proprioceptive_history,
             gyro,
             accel,
-            commands*self.obs_factor,
+            normalized_commands * self.obs_factor,
             contacts,
         ])
         
@@ -313,9 +331,9 @@ class EpisodicPolicy:
         self.linearVelocityScale = 1.0
         self.angularVelocityScale = 1.0
         self.dof_pos_scale = 1.0
-        self.dof_vel_scale = 0.1
+        self.dof_vel_scale = 0.5
         self.action_scale = 0.5
-        self.proprioceptive_history_length = 4
+        self.proprioceptive_history_length = 3
         self.proprioceptive_obs_size = 2*len(constants.JOINTS_ORDER) + self.action_size
         
         self.proprioceptive_history = np.zeros(self.proprioceptive_history_length*self.proprioceptive_obs_size)

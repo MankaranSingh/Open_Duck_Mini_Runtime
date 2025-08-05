@@ -6,6 +6,7 @@ from mini_bdx_runtime.rustypot_position_hwi import HWI
 from mini_bdx_runtime.raw_imu import Imu
 from mini_bdx_runtime.xbox_controller import XBoxController
 from mini_bdx_runtime.feet_contacts import FeetContacts
+from mini_bdx_runtime.common.utils import LowPassActionFilter
 #from mini_bdx_runtime.eyes import Eyes
 #from mini_bdx_runtime.sounds import Sounds
 #from mini_bdx_runtime.antennas import Antennas
@@ -21,7 +22,8 @@ class RLWalk:
         control_freq: float = 50,
         pid=[20, 0, 0],
         robot="dino",
-        initial_policy_type="standing"
+        initial_policy_type="standing",
+        cutoff_freq=50.0,
     ):
 
         # Control
@@ -59,6 +61,8 @@ class RLWalk:
         self.active_policy_type = initial_policy_type
         self.policy = self.policies[self.active_policy_type]
         print(f"Initial active policy: {self.active_policy_type}")
+
+        self.action_filter = LowPassActionFilter(50, cutoff_frequency=cutoff_freq)
         
         # Policy switching variables
         self.switch_pending = False
@@ -209,6 +213,9 @@ class RLWalk:
                     contacts,
                     self.commands
                 )
+
+                self.action_filter.push(motor_targets)
+                motor_targets = self.action_filter.get_filtered_action()
                 
                 # Create joint dictionary for hardware interface
                 joint_names = self.constants.JOINTS_ORDER
@@ -249,6 +256,12 @@ if __name__ == "__main__":
         choices=["episodic", "joystick", "standing"],
         help="Initial policy to use (episodic, joystick, standing)"
     )
+    parser.add_argument(
+        "--cutoff_freq", 
+        type=float, 
+        default=50.0, 
+        help="Cutoff frequency for low-pass filter"
+    )
 
     args = parser.parse_args()
     pid = [args.p, args.i, args.d]
@@ -258,6 +271,7 @@ if __name__ == "__main__":
         control_freq=args.control_freq,
         pid=pid,
         robot=args.robot,
-        initial_policy_type=args.policy_type
+        initial_policy_type=args.policy_type,
+        cutoff_freq=args.cutoff_freq
     )
     rl_walk.run()
