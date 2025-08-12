@@ -19,16 +19,16 @@ class JoystickPolicy:
         self.COMMANDS_RANGE_THETA = [-0.5, 0.5]
         
         # Policy state - commands will be set from outside
-        self.action_size = len(constants.JOINTS_ORDER)
-        self.full_action = np.zeros(self.action_size)
+        self.action_size = len(constants.JOINTS_ORDER) - len(constants.NON_LEG_JOINTS)
+        self.full_action = np.zeros(len(constants.JOINTS_ORDER))
         self.last_action = np.zeros(self.action_size)
-        self.active_idx = np.arange(self.action_size)
+        self.active_idx = np.array([idx for idx, joint in enumerate(constants.JOINTS_ORDER) if joint not in constants.NON_LEG_JOINTS])
         self.default_actuator = constants.DEFAULT_ACTUATOR_POS.copy()
 
         self.linearVelocityScale = 1.0
         self.angularVelocityScale = 1.0
         self.dof_pos_scale = 1.0
-        self.dof_vel_scale = 0.1
+        self.dof_vel_scale = 0.05
         self.action_scale = 0.25
         self.proprioceptive_history_length = 4
         self.proprioceptive_obs_size = 2*len(constants.JOINTS_ORDER) + self.action_size
