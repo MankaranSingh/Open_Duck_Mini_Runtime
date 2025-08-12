@@ -400,7 +400,7 @@ class EpisodicPolicy:
             accel,
             contacts,
             [self.imitation_i / self.n_frames],  # Normalized phase
-            current_reference_motion[0:len(self.constants.JOINTS_ORDER)][self.constants.ISAAC_TO_MUJOCO],
+            current_reference_motion[0:len(self.constants.JOINTS_ORDER)][self.constants.ISAAC_TO_MUJOCO] - self.default_actuator,
         ])
         
         action = self.model.infer(obs)
