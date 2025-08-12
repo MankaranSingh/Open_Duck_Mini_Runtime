@@ -44,7 +44,7 @@ class Imu:
 
     def get_data(self):
         gyro = np.array(self.imu.gyro)
-        accelero = np.array(self.imu.acceleration)
+        accelero = np.array(self.imu.acceleration) - self.accel_offsets
         self.last_imu_data = {
                 "gyro": gyro,
                 "accel": accelero,
