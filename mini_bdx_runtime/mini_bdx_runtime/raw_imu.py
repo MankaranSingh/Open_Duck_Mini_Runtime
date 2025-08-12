@@ -10,7 +10,7 @@ import time
 class Imu:
     def __init__(self, sampling_freq):
         self.sampling_freq = sampling_freq
-        self.x_offset = 0
+        self.accel_offsets = np.array([1.472, 0, -0.546])
 
         # Initialize I2C and MPU6050
         i2c = busio.I2C(board.SCL, board.SDA)
