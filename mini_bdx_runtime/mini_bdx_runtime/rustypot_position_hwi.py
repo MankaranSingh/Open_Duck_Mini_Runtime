@@ -44,20 +44,20 @@ class HWI:
         }
 
         self.joints_offsets = {
-            "neck_pitch": 1.456,
-            "head_pitch": 1.818,
-            "head_yaw": -0.04,
-            "tail": 0.048,
-            "right_hip_yaw": 0.138,
-            "right_hip_roll": -0.049,
-            "right_hip_pitch": -0.96,
-            "right_knee": -0.37,
-            "right_ankle": 0.431,
-            "left_hip_yaw": 0.074,
-            "left_hip_roll": 0.067,
-            "left_hip_pitch": 1.112,
-            "left_knee": 0.502,
-            "left_ankle": -0.48,
+            "neck_pitch": 1.493,
+            "head_pitch": 1.784,
+            "head_yaw": -0.048,
+            "tail": 0.055,
+            "right_hip_yaw": 0.158,
+            "right_hip_roll": -0.017,
+            "right_hip_pitch": -0.945,
+            "right_knee": -0.259,
+            "right_ankle": 0.537,
+            "left_hip_yaw": 0.028,
+            "left_hip_roll": 0.094,
+            "left_hip_pitch": 1.074,
+            "left_knee": 0.469,
+            "left_ankle": -0.457,
         }
 
         init_pos_with_offsets = {
