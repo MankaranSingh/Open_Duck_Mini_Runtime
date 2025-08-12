@@ -46,7 +46,7 @@ class JoystickPolicy:
         self.waiting_for_zero = False
         
         self.prev_motor_targets = self.default_actuator.copy()
-        self.max_motor_velocity = 5.24  # rad/s
+        self.max_motor_velocity = 5.0  # rad/s
 
         self.model = OnnxInfer(onnx_model_path, awd=True)
         print(f"Model loaded from {onnx_model_path}")
@@ -78,10 +78,10 @@ class JoystickPolicy:
         
         # Update phase only if active or waiting to reach zero
         if self.phase_active or self.waiting_for_zero:
-            G_output = blend_gait_parameters(self.gait_sample_data, velocity_commands[0], velocity_commands[1], velocity_commands[2], 
-                                             0.15, 0.15, 0.5)
+            # G_output = blend_gait_parameters(self.gait_sample_data, velocity_commands[0], velocity_commands[1], velocity_commands[2], 
+            #                                  0.15, 0.15, 0.5)
             x_step, y_step, theta_step, period = vel_to_step(velocity_commands[0], velocity_commands[1], velocity_commands[2], G_output)
-            self.nb_steps_in_period = int(period*50)
+            self.nb_steps_in_period = 30 # int(period*50)
 
             self.imitation_i += 1.0 * self.phase_frequency_factor
             self.imitation_i = int(self.imitation_i) % int(self.nb_steps_in_period)
