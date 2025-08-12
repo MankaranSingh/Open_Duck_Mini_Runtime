@@ -14,9 +14,9 @@ class JoystickPolicy:
         self.decimation = DECIMATION
 
         # Control ranges - kept for reference to guide command generation
-        self.COMMANDS_RANGE_X = [-0.1, 0.15]
-        self.COMMANDS_RANGE_Y = [-0.15, 0.15]
-        self.COMMANDS_RANGE_THETA = [-0.5, 0.5]
+        self.COMMANDS_RANGE_X = [-0.1, 0.2]
+        self.COMMANDS_RANGE_Y = [-0.2, 0.2]
+        self.COMMANDS_RANGE_THETA = [-1.0, 1.0]
         
         # Policy state - commands will be set from outside
         self.action_size = len(constants.JOINTS_ORDER) - len(constants.NON_LEG_JOINTS)
