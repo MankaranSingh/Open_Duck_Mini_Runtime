@@ -80,7 +80,7 @@ class JoystickPolicy:
         if self.phase_active or self.waiting_for_zero:
             # G_output = blend_gait_parameters(self.gait_sample_data, velocity_commands[0], velocity_commands[1], velocity_commands[2], 
             #                                  0.15, 0.15, 0.5)
-            x_step, y_step, theta_step, period = vel_to_step(velocity_commands[0], velocity_commands[1], velocity_commands[2], G_output)
+            # x_step, y_step, theta_step, period = vel_to_step(velocity_commands[0], velocity_commands[1], velocity_commands[2], G_output)
             self.nb_steps_in_period = 30 # int(period*50)
 
             self.imitation_i += 1.0 * self.phase_frequency_factor
