@@ -44,9 +44,9 @@ class HWI:
         }
 
         self.joints_offsets = {
-            "neck_pitch": 1.496,
+            "neck_pitch": 1.513,
             "head_pitch": 1.778,
-            "head_yaw": -0.051,
+            "head_yaw": -0.002,
             "tail": 0.041,
             "right_hip_yaw": 0.026,
             "right_hip_roll": -0.017,
