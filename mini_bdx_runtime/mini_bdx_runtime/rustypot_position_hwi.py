@@ -141,7 +141,7 @@ class HWI:
             for joint, pos in zip(self.joints.keys(), present_positions)
             if joint not in ignore
         ]
-        return np.array(np.around(present_positions, 3))
+        return np.array(present_positions)
 
     def get_present_velocities(self, rad_s=True, ignore=[]):
         """
@@ -159,7 +159,7 @@ class HWI:
         # )
         # if rad_s:
         #     present_velocities = np.deg2rad(present_velocities)  # rad/s
-        return np.array(np.around(present_velocities, 3))
+        return np.array(present_velocities)
 
     def get_present_voltages(self):
         return np.array(self.control.io.get_present_voltage(self.joints.values())) * 0.1

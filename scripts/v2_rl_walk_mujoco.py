@@ -78,7 +78,6 @@ class RLWalk:
 
         # Initialize commands
         self.commands = self.policy.get_default_commands()
-        self.saved_obs = []
 
         self.start()
         
@@ -214,8 +213,8 @@ class RLWalk:
                     self.commands
                 )
 
-                self.action_filter.push(motor_targets)
-                motor_targets = self.action_filter.get_filtered_action()
+                # self.action_filter.push(motor_targets)
+                # motor_targets = self.action_filter.get_filtered_action()
                 
                 # Create joint dictionary for hardware interface
                 joint_names = self.constants.JOINTS_ORDER
@@ -238,7 +237,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", type=int, default=32)
+    parser.add_argument("-p", type=int, default=22)
     parser.add_argument("-i", type=int, default=0)
     parser.add_argument("-d", type=int, default=0)
     parser.add_argument("-c", "--control_freq", type=int, default=50)
