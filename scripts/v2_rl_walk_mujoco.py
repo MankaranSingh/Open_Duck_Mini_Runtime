@@ -7,7 +7,7 @@ from mini_bdx_runtime.raw_imu import Imu
 from mini_bdx_runtime.xbox_controller import XBoxController
 from mini_bdx_runtime.feet_contacts import FeetContacts
 from mini_bdx_runtime.common.utils import LowPassActionFilter
-#from mini_bdx_runtime.eyes import Eyes
+from mini_bdx_runtime.eyes import Eyes
 #from mini_bdx_runtime.sounds import Sounds
 #from mini_bdx_runtime.antennas import Antennas
 #from mini_bdx_runtime.projector import Projector
@@ -84,7 +84,7 @@ class RLWalk:
         # Expression package
         #self.sounds = Sounds(volume=1.0, sound_directory="../mini_bdx_runtime/assets/")
         #self.antennas = Antennas()
-        #self.eyes = Eyes()
+        self.eyes = Eyes()
         #self.projector = Projector()
 
         self.xbox_controller = XBoxController()
@@ -178,12 +178,14 @@ class RLWalk:
         self.commands = self.policy.joystick_to_commands(stick_vals)
 
     def start(self):
+        low_kps = [5] * len(self.constants.JOINTS_ORDER)
         kps = [self.pid[0]] * len(self.constants.JOINTS_ORDER)
         kds = [self.pid[2]] * len(self.constants.JOINTS_ORDER)
-        self.hwi.set_kps(kps)
+        self.hwi.set_kps(low_kps)
         self.hwi.set_kds(kds)
         self.hwi.turn_on()
         time.sleep(2)
+        self.hwi.set_kps(kps)
 
     def run(self):
         i = 0
