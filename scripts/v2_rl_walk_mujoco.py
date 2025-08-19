@@ -8,7 +8,7 @@ from mini_bdx_runtime.raw_imu import Imu
 from mini_bdx_runtime.xbox_controller import XBoxController
 from mini_bdx_runtime.feet_contacts import FeetContacts
 from mini_bdx_runtime.common.utils import LowPassActionFilter
-# from mini_bdx_runtime.eyes import Eyes
+from mini_bdx_runtime.eyes import Eyes
 #from mini_bdx_runtime.sounds import Sounds
 #from mini_bdx_runtime.antennas import Antennas
 #from mini_bdx_runtime.projector import Projector
@@ -85,7 +85,7 @@ class RLWalk:
         # Expression package
         #self.sounds = Sounds(volume=1.0, sound_directory="../mini_bdx_runtime/assets/")
         #self.antennas = Antennas()
-        # self.eyes = Eyes()
+        self.eyes = Eyes()
         #self.projector = Projector()
 
         self.xbox_controller = XBoxController()
