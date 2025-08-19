@@ -16,9 +16,8 @@ def scan():
             io.get_present_position([i])
             id = i
             print(f"Found motor with id {id}")
-            break
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Motor with id {i} not found: {e}")
 
 
 scan()
