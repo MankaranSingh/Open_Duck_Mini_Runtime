@@ -8,7 +8,7 @@ from mini_bdx_runtime.raw_imu import Imu
 from mini_bdx_runtime.xbox_controller import XBoxController
 from mini_bdx_runtime.feet_contacts import FeetContacts
 from mini_bdx_runtime.common.utils import LowPassActionFilter
-from mini_bdx_runtime.eyes import Eyes
+# from mini_bdx_runtime.eyes import Eyes
 #from mini_bdx_runtime.sounds import Sounds
 #from mini_bdx_runtime.antennas import Antennas
 #from mini_bdx_runtime.projector import Projector
@@ -85,7 +85,7 @@ class RLWalk:
         # Expression package
         #self.sounds = Sounds(volume=1.0, sound_directory="../mini_bdx_runtime/assets/")
         #self.antennas = Antennas()
-        self.eyes = Eyes()
+        # self.eyes = Eyes()
         #self.projector = Projector()
 
         self.xbox_controller = XBoxController()
@@ -208,7 +208,7 @@ class RLWalk:
         self.hwi.set_kds(kds)
         print("Motors activated with standing policy")
 
-    def wait_for_safe_position(self, threshold_deg=10, check_interval=0.5):
+    def wait_for_safe_position(self, threshold_deg=20, check_interval=0.1):
         """Wait until hip pitch joints are within threshold of default position"""
         threshold_rad = np.deg2rad(threshold_deg)
         
@@ -228,9 +228,9 @@ class RLWalk:
                 print("Hip pitch joints in position, activating motors...")
                 break
             
-            print(f"Waiting for hip pitch joints to reach position... Current positions: "
-                  f"Right: {np.rad2deg(current_positions[right_hip_pitch_idx]):.1f}°, "
-                  f"Left: {np.rad2deg(current_positions[left_hip_pitch_idx]):.1f}°")
+            # print(f"Waiting for hip pitch joints to reach position... Current positions: "
+            #       f"Right: {np.rad2deg(current_positions[right_hip_pitch_idx]):.1f}°, "
+            #       f"Left: {np.rad2deg(current_positions[left_hip_pitch_idx]):.1f}°")
             
             time.sleep(check_interval)
 
