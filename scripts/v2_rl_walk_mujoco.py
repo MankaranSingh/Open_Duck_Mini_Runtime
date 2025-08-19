@@ -97,7 +97,7 @@ class RLWalk:
 
     def init_controller_thread(self):
         """Initialize Xbox controller in a separate thread"""
-        if self.xbox_controller.wait_for_connection(timeout=60):
+        if self.xbox_controller.wait_for_connection(timeout=None):
             print("Bluetooth controller connected successfully")
             self.use_controller = True
         else:
