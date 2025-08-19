@@ -23,7 +23,8 @@ class Eyes:
         # PWM range for pigpio is 0-255
         self._pwm_range = 255
         
-        Thread(target=self.run, daemon=True).start()
+        self.thread = Thread(target=self.run, daemon=True)
+        self.thread.start()
 
     def set_color(self, r, g, b):
         """Set LED color with floats 0.0–1.0"""
