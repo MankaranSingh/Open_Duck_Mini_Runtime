@@ -32,6 +32,12 @@ class RLWalk:
         self.pid = pid
         self.constants = eval(f"{robot}_constants")
 
+        # Expression package
+        #self.sounds = Sounds(volume=1.0, sound_directory="../mini_bdx_runtime/assets/")
+        #self.antennas = Antennas()
+        self.eyes = Eyes()
+        #self.projector = Projector()
+
         self.hwi = HWI(serial_port)
         self.imu = Imu(sampling_freq=int(self.control_freq),)
         self.feet_contacts = FeetContacts()
@@ -81,12 +87,6 @@ class RLWalk:
         self.commands = self.policy.get_default_commands()
 
         self.start()
-        
-        # Expression package
-        #self.sounds = Sounds(volume=1.0, sound_directory="../mini_bdx_runtime/assets/")
-        #self.antennas = Antennas()
-        self.eyes = Eyes()
-        #self.projector = Projector()
 
         self.xbox_controller = XBoxController()
         self.use_controller = False
