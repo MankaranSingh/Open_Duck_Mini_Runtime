@@ -1,6 +1,7 @@
 import os
 import time
 import numpy as np
+import threading
 
 from mini_bdx_runtime.rustypot_position_hwi import HWI
 from mini_bdx_runtime.raw_imu import Imu
@@ -88,12 +89,20 @@ class RLWalk:
         #self.projector = Projector()
 
         self.xbox_controller = XBoxController()
-        if not self.xbox_controller.wait_for_connection(timeout=60):
-            print("Warning: Starting without Bluetooth controller")
-            self.use_controller = False
-        else:
-            print("Bluetooth controller connected, proceeding with initialization")
+        self.use_controller = False
+        # Start controller initialization in a separate thread
+        self.controller_thread = threading.Thread(target=self.init_controller_thread)
+        self.controller_thread.daemon = True  # Thread will exit when main program exits
+        self.controller_thread.start()
+
+    def init_controller_thread(self):
+        """Initialize Xbox controller in a separate thread"""
+        if self.xbox_controller.wait_for_connection(timeout=60):
+            print("Bluetooth controller connected successfully")
             self.use_controller = True
+        else:
+            print("Warning: Could not connect to Bluetooth controller")
+            self.use_controller = False
 
     def request_policy_switch(self, new_policy_type):
         """Request a policy switch with specific requirements for each policy"""
@@ -163,29 +172,67 @@ class RLWalk:
         if not self.use_controller or self.switch_pending:
             return
             
-        # Get controller stick values
-        stick_vals = self.xbox_controller.get_sticks()
-        buttons = self.xbox_controller.get_buttons()
-        
-        # Check for policy switch buttons
-        if buttons[0]: 
-            self.request_policy_switch("joystick")
-        elif buttons[1]: 
-            self.request_policy_switch("standing")
-        elif buttons[2]:  
-            self.request_policy_switch("episodic")
+        # Check if controller is initialized before trying to use it
+        try:
+            # Get controller stick values
+            stick_vals = self.xbox_controller.get_sticks()
+            buttons = self.xbox_controller.get_buttons()
             
-        self.commands = self.policy.joystick_to_commands(stick_vals)
+            # Check for policy switch buttons
+            if buttons[0]: 
+                self.request_policy_switch("joystick")
+            elif buttons[1]: 
+                self.request_policy_switch("standing")
+            elif buttons[2]:  
+                self.request_policy_switch("episodic")
+                
+            self.commands = self.policy.joystick_to_commands(stick_vals)
+        except Exception as e:
+            # Handle any exceptions that might occur if controller isn't fully ready
+            pass
 
     def start(self):
-        low_kps = [5] * len(self.constants.JOINTS_ORDER)
+        """Initialize motors without enabling torque, wait for proper joint positions"""
+        # Set up PID values but don't enable torque yet
+        # low_kps = [5] * len(self.constants.JOINTS_ORDER)
         kps = [self.pid[0]] * len(self.constants.JOINTS_ORDER)
         kds = [self.pid[2]] * len(self.constants.JOINTS_ORDER)
-        self.hwi.set_kps(low_kps)
-        self.hwi.set_kds(kds)
+        
+        # Wait for hip pitch joints to reach default positions (within ±10 degrees)
+        print("Motors are limp. Please position the robot properly...")
+        self.wait_for_safe_position()
+        
+        # Now turn on motors and set regular kps
         self.hwi.turn_on()
-        time.sleep(2)
         self.hwi.set_kps(kps)
+        self.hwi.set_kds(kds)
+        print("Motors activated with standing policy")
+
+    def wait_for_safe_position(self, threshold_deg=10, check_interval=0.5):
+        """Wait until hip pitch joints are within threshold of default position"""
+        threshold_rad = np.deg2rad(threshold_deg)
+        
+        # Get indices of hip pitch joints
+        right_hip_pitch_idx = self.constants.JOINTS_ORDER.index("right_hip_pitch")
+        left_hip_pitch_idx = self.constants.JOINTS_ORDER.index("left_hip_pitch")
+        
+        while True:
+            # Get current positions
+            current_positions = self.hwi.get_present_positions()
+            
+            # Check if hip pitch joints are close to default (0 radians)
+            right_hip_ok = abs(current_positions[right_hip_pitch_idx]) < threshold_rad
+            left_hip_ok = abs(current_positions[left_hip_pitch_idx]) < threshold_rad
+            
+            if right_hip_ok and left_hip_ok:
+                print("Hip pitch joints in position, activating motors...")
+                break
+            
+            print(f"Waiting for hip pitch joints to reach position... Current positions: "
+                  f"Right: {np.rad2deg(current_positions[right_hip_pitch_idx]):.1f}°, "
+                  f"Left: {np.rad2deg(current_positions[left_hip_pitch_idx]):.1f}°")
+            
+            time.sleep(check_interval)
 
     def run(self):
         i = 0
