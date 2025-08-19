@@ -40,7 +40,7 @@ class Eyes:
         """Solid blink (no fade, just off/on)"""
         # Eye closes
         self.set_color(0, 0, 0)
-        time.sleep(random.uniform(0.08, 0.18))  # blink duration
+        time.sleep(random.uniform(0.08, 0.12))  # blink duration
         # Eye opens
         self.set_color(r, g, b)
 
@@ -57,7 +57,7 @@ class Eyes:
 
             # ~10% chance of a quick second blink
             if random.random() < 0.1:
-                time.sleep(random.uniform(0.1, 0.3))  # short pause
+                time.sleep(random.uniform(0.08, 0.15))  # short pause
                 self.blink(*EYE_COLOR)
 
     def cleanup(self):
