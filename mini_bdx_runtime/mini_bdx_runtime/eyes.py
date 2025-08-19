@@ -1,4 +1,4 @@
-import RPi.GPIO as GPIO
+import pigpio
 import numpy as np
 import time
 import random
@@ -15,30 +15,26 @@ EYE_COLOR = np.array([8, 29, 54])/255
 
 class Eyes:
     def __init__(self):
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setwarnings(False)
+        # Initialize pigpio
+        self.pi = pigpio.pi()
+        if not self.pi.connected:
+            raise RuntimeError("Could not connect to pigpio daemon. Run 'sudo pigpiod' first.")
         
-        # Setup RGB pins
-        GPIO.setup(RED_PIN, GPIO.OUT)
-        GPIO.setup(GREEN_PIN, GPIO.OUT)
-        GPIO.setup(BLUE_PIN, GPIO.OUT)
-
-        # PWM setup
-        self.red_pwm = GPIO.PWM(RED_PIN, 1000)
-        self.green_pwm = GPIO.PWM(GREEN_PIN, 1000)
-        self.blue_pwm = GPIO.PWM(BLUE_PIN, 1000)
-
-        self.red_pwm.start(0)
-        self.green_pwm.start(0)
-        self.blue_pwm.start(0)
-
+        # PWM range for pigpio is 0-255
+        self._pwm_range = 255
+        
         Thread(target=self.run, daemon=True).start()
 
     def set_color(self, r, g, b):
         """Set LED color with floats 0.0–1.0"""
-        self.red_pwm.ChangeDutyCycle(r * 100)
-        self.green_pwm.ChangeDutyCycle(g * 100)
-        self.blue_pwm.ChangeDutyCycle(b * 100)
+        # Convert 0-1 range to 0-255 for pigpio
+        r_val = int(r * self._pwm_range)
+        g_val = int(g * self._pwm_range)
+        b_val = int(b * self._pwm_range)
+        
+        self.pi.set_PWM_dutycycle(RED_PIN, r_val)
+        self.pi.set_PWM_dutycycle(GREEN_PIN, g_val)
+        self.pi.set_PWM_dutycycle(BLUE_PIN, b_val)
 
     def blink(self, r=1.0, g=0.0, b=0.0):
         """Solid blink (no fade, just off/on)"""
@@ -65,9 +61,13 @@ class Eyes:
                 self.blink(*EYE_COLOR)
 
     def cleanup(self):
-        self.red_pwm.stop()
-        self.green_pwm.stop()
-        self.blue_pwm.stop()
+        # Turn off all LEDs
+        self.pi.set_PWM_dutycycle(RED_PIN, 0)
+        self.pi.set_PWM_dutycycle(GREEN_PIN, 0)
+        self.pi.set_PWM_dutycycle(BLUE_PIN, 0)
+        
+        # Stop connection to pigpio daemon
+        self.pi.stop()
 
 
 if __name__ == "__main__":
@@ -77,4 +77,3 @@ if __name__ == "__main__":
             time.sleep(1)
     except KeyboardInterrupt:
         e.cleanup()
-        GPIO.cleanup()
