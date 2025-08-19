@@ -86,14 +86,14 @@ class RLWalk:
         # Initialize commands
         self.commands = self.policy.get_default_commands()
 
-        self.start()
-
         self.xbox_controller = XBoxController()
         self.use_controller = False
         # Start controller initialization in a separate thread
         self.controller_thread = threading.Thread(target=self.init_controller_thread)
         self.controller_thread.daemon = True  # Thread will exit when main program exits
         self.controller_thread.start()
+
+        self.start()
 
     def init_controller_thread(self):
         """Initialize Xbox controller in a separate thread"""
