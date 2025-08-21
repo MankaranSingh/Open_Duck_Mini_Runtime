@@ -56,6 +56,23 @@ JOINTS_ORDER = [
     "left_ankle",
 ]
 
+JOINT_LIMITS = {
+    "head_yaw": np.deg2rad([-180.0, 180.0]),
+    "head_pitch": np.deg2rad([-60.0, 60.0]),
+    "neck_pitch": np.deg2rad([-60.0, 15.0]),
+    "tail": np.deg2rad([-20.0, 20.0]),           
+    "right_ankle": np.deg2rad([-60.0, 60.0]),
+    "right_knee": np.deg2rad([-40.0, 70.0]),     
+    "right_hip_pitch": np.deg2rad([-90.0, 45.0]),
+    "right_hip_roll": np.deg2rad([-25.0, 15.0]), 
+    "right_hip_yaw": np.deg2rad([-15.0, 20.0]),
+    "left_ankle": np.deg2rad([-60.0, 60.0]),
+    "left_knee": np.deg2rad([-70.0, 40.0]),
+    "left_hip_pitch": np.deg2rad([-45.0, 90.0]),
+    "left_hip_roll": np.deg2rad([-15.0, 25.0]),  
+    "left_hip_yaw": np.deg2rad([-20.0, 15.0])    
+}
+
 JOINT_ORDER_ISAAC = [
     "neck_pitch",
     "head_pitch",
