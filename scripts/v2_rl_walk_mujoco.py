@@ -14,6 +14,7 @@ from mini_bdx_runtime.eyes import Eyes
 #from mini_bdx_runtime.projector import Projector
 from mini_bdx_runtime.common import mini2_constants, dino_constants
 from mini_bdx_runtime.common.policies import JoystickPolicy, StandingPolicy, EpisodicPolicy
+from mini_bdx_runtime.common.modifiers import JoystickPolicyModifier, StandingPolicyModifier, EpisodicPolicyModifier
 
 
 class RLWalk:
@@ -63,10 +64,18 @@ class RLWalk:
             "standing": StandingPolicy(self.constants, self.model_paths["standing"]),
             "episodic": EpisodicPolicy(self.constants, self.model_paths["episodic"], self.reference_paths["episodic"])
         }
+
+        # Initialize policy modifiers
+        self.policy_modifiers = {
+            "joystick": JoystickPolicyModifier(self.constants),
+            "standing": StandingPolicyModifier(self.constants),
+            "episodic": EpisodicPolicyModifier(self.constants)
+        }
         
         # Set initial active policy
         self.active_policy_type = initial_policy_type
         self.policy = self.policies[self.active_policy_type]
+        self.policy_modifier = self.policy_modifiers[self.active_policy_type]
         print(f"Initial active policy: {self.active_policy_type}")
 
         self.action_filter = LowPassActionFilter(50, cutoff_frequency=cutoff_freq)
@@ -148,6 +157,7 @@ class RLWalk:
         print(f"Switching from {self.active_policy_type} to {self.target_policy_type} policy")
         self.active_policy_type = self.target_policy_type
         self.policy = self.policies[self.target_policy_type]
+        self.policy_modifier = self.policy_modifiers[self.target_policy_type]
         self.policy.reset()
         self.commands = self.policy.get_default_commands()
         
@@ -260,6 +270,18 @@ class RLWalk:
                     gyro, 
                     contacts,
                     self.commands
+                )
+
+                # Apply policy modifier with all the same parameters
+                motor_targets = self.policy_modifier.modify(
+                    motor_targets,
+                    joint_pos=joint_angles,
+                    joint_vel=joint_vel,
+                    accel=accelerometer,
+                    gyro=gyro,
+                    contacts=contacts,
+                    commands=self.commands,
+                    timestamp=time.time()
                 )
 
                 # self.action_filter.push(motor_targets)

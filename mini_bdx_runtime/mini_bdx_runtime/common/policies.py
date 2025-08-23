@@ -144,7 +144,7 @@ class JoystickPolicy:
 
         return np.array([lin_vel_x, lin_vel_y, ang_vel,]) 
 
-    def infer(self, joint_pos, joint_vel, accel, gyro, contacts, commands):
+    def infer(self, joint_pos, joint_vel, accel, gyro, contacts, commands, gravity=None):
         """Process observations to get actions"""
         # Update phase based on current commands
         self.update_phase(commands)
@@ -274,7 +274,7 @@ class StandingPolicy:
 
         return np.array([height_delta, roll_delta, pitch_delta, yaw_delta])
     
-    def infer(self, joint_pos, joint_vel, accel, gyro, contacts, commands):
+    def infer(self, joint_pos, joint_vel, accel, gyro, contacts, commands, gravity=None):
         """Process observations to get actions"""
         proprioceptive_obs = np.concatenate([
             joint_pos - self.default_actuator,
@@ -379,7 +379,7 @@ class EpisodicPolicy:
         self.imitation_i %= self.n_frames
         return self.imitation_i
         
-    def infer(self, joint_pos, joint_vel, accel, gyro, contacts, commands=[1]):
+    def infer(self, joint_pos, joint_vel, accel, gyro, contacts, commands=[1], gravity=None):
         """Process observations to get actions, commands is phase rate"""
         # Get current reference motion
         current_reference_motion = self.EM.get_reference_motion(self.imitation_i)
