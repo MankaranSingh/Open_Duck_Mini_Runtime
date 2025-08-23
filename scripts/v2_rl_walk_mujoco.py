@@ -220,6 +220,7 @@ class RLWalk:
         kds = [self.pid[2]] * len(all_joint_ids)
         
         # Set kps for head/neck/tail joints only (with kp=1)
+        self.hwi.disable_torque()
         self.hwi.set_kps(head_neck_tail_kps, head_neck_tail_ids)
         
         # Set kds for all joints
