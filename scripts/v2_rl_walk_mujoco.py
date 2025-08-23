@@ -102,6 +102,7 @@ class RLWalk:
         self.controller_thread.daemon = True  # Thread will exit when main program exits
         self.controller_thread.start()
 
+        # Initialize motors without enabling torque for legs
         self.start()
 
     def init_controller_thread(self):
@@ -202,21 +203,55 @@ class RLWalk:
             pass
 
     def start(self):
-        """Initialize motors without enabling torque, wait for proper joint positions"""
-        # Set up PID values but don't enable torque yet
-        # low_kps = [5] * len(self.constants.JOINTS_ORDER)
-        kps = [self.pid[0]] * len(self.constants.JOINTS_ORDER)
-        kds = [self.pid[2]] * len(self.constants.JOINTS_ORDER)
+        """Initialize motors by enabling only head, neck, and tail joints"""
+        # Set initial low kp for head/neck/tail joints
+        head_neck_tail_joints = ["neck_pitch", "head_pitch", "head_yaw", "tail"]
+        leg_joints = [joint for joint in self.constants.JOINTS_ORDER if joint not in head_neck_tail_joints]
         
-        # Wait for hip pitch joints to reach default positions (within ±10 degrees)
-        print("Motors are limp. Please position the robot properly...")
+        # Get IDs for these joints
+        head_neck_tail_ids = [self.hwi.joints[joint] for joint in head_neck_tail_joints]
+        leg_joint_ids = [self.hwi.joints[joint] for joint in leg_joints]
+        
+        # Set kp=1 for head/neck/tail joints only
+        head_neck_tail_kps = [1] * len(head_neck_tail_ids)
+        
+        # Set kd values for all joints
+        all_joint_ids = list(self.hwi.joints.values())
+        kds = [self.pid[2]] * len(all_joint_ids)
+        
+        # Set kps for head/neck/tail joints only (with kp=1)
+        self.hwi.set_kps(head_neck_tail_kps, head_neck_tail_ids)
+        
+        # Set kds for all joints
+        self.hwi.set_kds(kds, all_joint_ids)
+        
+        print("Motors partially activated: head, neck and tail joints enabled at low torque")
+        
+        # Start a background thread to wait for safe position and enable leg joints
+        self.safe_position_thread = threading.Thread(target=self.enable_legs_when_safe)
+        self.safe_position_thread.daemon = True
+        self.safe_position_thread.start()
+    
+    def enable_legs_when_safe(self):
+        """Background thread to wait for safe leg position and then enable leg motors"""
         self.wait_for_safe_position()
         
-        # Now turn on motors and set regular kps
-        self.hwi.turn_on()
-        self.hwi.set_kps(kps)
-        self.hwi.set_kds(kds)
-        print("Motors activated with standing policy")
+        # Get all joint IDs by name
+        head_neck_tail_joints = ["neck_pitch", "head_pitch", "head_yaw", "tail"]
+        leg_joints = [joint for joint in self.constants.JOINTS_ORDER if joint not in head_neck_tail_joints]
+        
+        # Get IDs for these joints
+        head_neck_tail_ids = [self.hwi.joints[joint] for joint in head_neck_tail_joints]
+        leg_joint_ids = [self.hwi.joints[joint] for joint in leg_joints]
+        
+        # Set kp values - kp=1 for head/neck/tail, normal pid for legs
+        head_neck_tail_kps = [1] * len(head_neck_tail_ids)
+        leg_kps = [self.pid[0]] * len(leg_joint_ids)
+        
+        # Apply kps to leg joints
+        self.hwi.set_kps(leg_kps, leg_joint_ids)
+        
+        print("Hip pitch joints in safe position. Leg motors activated at normal torque.")
 
     def wait_for_safe_position(self, threshold_deg=20, check_interval=0.1):
         """Wait until hip pitch joints are within threshold of default position"""
@@ -226,6 +261,7 @@ class RLWalk:
         right_hip_pitch_idx = self.constants.JOINTS_ORDER.index("right_hip_pitch")
         left_hip_pitch_idx = self.constants.JOINTS_ORDER.index("left_hip_pitch")
         
+        print("Waiting for hip pitch joints to reach safe position...")
         while True:
             # Get current positions
             current_positions = self.hwi.get_present_positions()
@@ -235,12 +271,7 @@ class RLWalk:
             left_hip_ok = abs(current_positions[left_hip_pitch_idx]) < threshold_rad
             
             if right_hip_ok and left_hip_ok:
-                print("Hip pitch joints in position, activating motors...")
-                break
-            
-            # print(f"Waiting for hip pitch joints to reach position... Current positions: "
-            #       f"Right: {np.rad2deg(current_positions[right_hip_pitch_idx]):.1f}°, "
-            #       f"Left: {np.rad2deg(current_positions[left_hip_pitch_idx]):.1f}°")
+                return
             
             time.sleep(check_interval)
 

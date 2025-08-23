@@ -1,6 +1,3 @@
-import time
-from typing import List
-
 import numpy as np
 import rustypot
 
@@ -65,37 +62,23 @@ class HWI:
             for joint, pos in self.init_pos.items()
         }
 
-        self.kps = np.ones(len(self.joints)) * 22  # default kp
-        self.kds = np.ones(len(self.joints)) * 0  # default kd
-        self.low_torque_kps = np.ones(len(self.joints)) * 2
-
-        # self.control = rustypot.FeetechController(
-        #     usb_port, 1000000, 100, list(self.joints.values()), list(self.kps), list(init_pos_with_offsets.values())
-        # )
+      
         self.io = rustypot.feetech(usb_port, 1000000)
 
-    def set_kps(self, kps):
-        self.kps = kps
-        self.io.set_kps(list(self.joints.values()), self.kps)
-        # self.control.set_new_kps(self.kps)
+    def set_kps(self, kps, joint_ids=None):
+        joint_ids = joint_ids or list(self.joints.values())
+        self.io.set_kps(joint_ids, kps)
 
-    def set_kds(self, kds):
-        self.kds = kds
-        self.io.set_kds(list(self.joints.values()), self.kds)
+    def set_kds(self, kds, joint_ids=None):
+        joint_ids = joint_ids or list(self.joints.values())
+        self.io.set_kds(joint_ids, kds)
 
     def set_kp(self, id, kp):
-        # self.kps[id] = kp
         self.io.set_kps([id], [kp])
 
-    def turn_on(self):
-        self.io.set_kps(list(self.joints.values()), self.kps)
-
-    def turn_off(self):
-        self.io.disable_torque(list(self.joints.values()))
-        # self.control.disable_torque()
-
-    # def freeze(self):
-    #     self.control.freeze()
+    def disable_torque(self, joint_ids=None):
+        joint_ids = joint_ids or list(self.joints.values())
+        self.io.disable_torque(joint_ids)
 
     def set_position(self, joint_name, pos):
         """
@@ -104,7 +87,6 @@ class HWI:
         id = self.joints[joint_name]
         pos = pos + self.joints_offsets[joint_name]
         self.io.write_goal_position([id], [pos])
-        # self.control.set_new_target([pos])
 
     def set_position_all(self, joints_positions):
         """
@@ -119,20 +101,12 @@ class HWI:
         self.io.write_goal_position(
             list(self.joints.values()), list(ids_positions.values())
         )
-        # self.control.set_new_target(list(ids_positions.values()))
-        # self.control.goal_positions = list(ids_positions.values())
 
     def get_present_positions(self, ignore=[]):
         """
         Returns the present positions in radians
         """
-
-        # present_positions = np.deg2rad(
-        #     self.control.io.get_present_position(self.joints.values())
-        # )
-
         present_positions = self.io.read_present_position(list(self.joints.values()))
-        # present_positions = np.deg2rad(self.control.get_present_position())
         present_positions = [
             pos - self.joints_offsets[joint]
             for joint, pos in zip(self.joints.keys(), present_positions)
@@ -140,22 +114,16 @@ class HWI:
         ]
         return np.array(present_positions)
 
-    def get_present_velocities(self, rad_s=True, ignore=[]):
+    def get_present_velocities(self, ignore=[]):
         """
-        Returns the present velocities in rad/s (default) or rev/min
+        Returns the present velocities in rad/s
         """
         present_velocities = self.io.read_present_velocity(list(self.joints.values()))
-        # present_velocities = np.array(self.control.get_current_speed())
         present_velocities = [
             vel
             for joint, vel in zip(self.joints.keys(), present_velocities)
             if joint not in ignore
         ]
-        # present_velocities = np.array(
-        #     self.control.io.get_present_speed(self.joints.values())
-        # )
-        # if rad_s:
-        #     present_velocities = np.deg2rad(present_velocities)  # rad/s
         return np.array(present_velocities)
 
     def get_present_voltages(self):
