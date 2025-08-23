@@ -222,9 +222,9 @@ class RLWalk:
         # Set kps for head/neck/tail joints only (with kp=1)
         self.hwi.disable_torque()
         self.hwi.set_kps(head_neck_tail_kps, head_neck_tail_ids)
-        
         # Set kds for all joints
         self.hwi.set_kds(kds, all_joint_ids)
+        self.hwi.disable_torque(leg_joint_ids)
         
         print("Motors partially activated: head, neck and tail joints enabled at low torque")
         
@@ -256,6 +256,7 @@ class RLWalk:
 
     def wait_for_safe_position(self, threshold_deg=20, check_interval=0.1):
         """Wait until hip pitch joints are within threshold of default position"""
+        print("here")
         threshold_rad = np.deg2rad(threshold_deg)
         
         # Get indices of hip pitch joints
