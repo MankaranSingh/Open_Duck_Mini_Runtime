@@ -14,8 +14,8 @@ from mini_bdx_runtime.eyes import Eyes
 #from mini_bdx_runtime.projector import Projector
 from mini_bdx_runtime.common import mini2_constants, dino_constants
 from mini_bdx_runtime.common.policies import JoystickPolicy, StandingPolicy, EpisodicPolicy
-from mini_bdx_runtime.common.modifiers import JoystickPolicyModifier, StandingPolicyModifier, EpisodicPolicyModifier
-
+from mini_bdx_runtime.common.modifiers_test import JoystickPolicyModifier, StandingPolicyModifier, EpisodicPolicyModifier
+from mini_bdx_runtime.common.head_teleop_client import HeadTelop
 
 class RLWalk:
     def __init__(
@@ -38,6 +38,9 @@ class RLWalk:
         #self.antennas = Antennas()
         self.eyes = Eyes()
         #self.projector = Projector()
+
+        self.head_teleop_client = HeadTelop()
+        self.head_teleop_client.start()
 
         self.hwi = HWI(serial_port)
         self.imu = Imu(sampling_freq=int(self.control_freq),)
@@ -102,6 +105,18 @@ class RLWalk:
         self.controller_thread.daemon = True  # Thread will exit when main program exits
         self.controller_thread.start()
 
+        # Flag to track if legs are safe to control
+        self.legs_enabled = False
+        
+        # Define joint groups once
+        self.head_neck_tail_joints = ["neck_pitch", "head_pitch", "head_yaw", "tail"]
+        self.leg_joints = [joint for joint in self.constants.JOINTS_ORDER 
+                          if joint not in self.head_neck_tail_joints]
+        
+        # Store joint IDs once
+        self.head_neck_tail_ids = [self.hwi.joints[joint] for joint in self.head_neck_tail_joints]
+        self.leg_joint_ids = [self.hwi.joints[joint] for joint in self.leg_joints]
+        
         # Initialize motors without enabling torque for legs
         self.start()
 
@@ -174,7 +189,12 @@ class RLWalk:
         imu_data = self.imu.get_data()
         accelerometer = imu_data["accel"]
         gyro = imu_data["gyro"]
-        contacts = self.feet_contacts.get()
+        
+        # If legs are not enabled yet, simulate ground contacts for stability
+        if not self.legs_enabled:
+            contacts = [True, True]  # Both feet in contact with ground
+        else:
+            contacts = self.feet_contacts.get()
 
         return joint_angles, joint_vel, accelerometer, gyro, contacts
     
@@ -204,27 +224,13 @@ class RLWalk:
 
     def start(self):
         """Initialize motors by enabling only head, neck, and tail joints"""
-        # Set initial low kp for head/neck/tail joints
-        head_neck_tail_joints = ["neck_pitch", "head_pitch", "head_yaw", "tail"]
-        leg_joints = [joint for joint in self.constants.JOINTS_ORDER if joint not in head_neck_tail_joints]
-        
-        # Get IDs for these joints
-        head_neck_tail_ids = [self.hwi.joints[joint] for joint in head_neck_tail_joints]
-        leg_joint_ids = [self.hwi.joints[joint] for joint in leg_joints]
-        
         # Set kp=1 for head/neck/tail joints only
-        head_neck_tail_kps = [1] * len(head_neck_tail_ids)
-        
-        # Set kd values for all joints
-        all_joint_ids = list(self.hwi.joints.values())
-        kds = [self.pid[2]] * len(all_joint_ids)
+        head_neck_tail_kps = [8] * len(self.head_neck_tail_ids)
         
         # Set kps for head/neck/tail joints only (with kp=1)
-        self.hwi.disable_torque()
-        self.hwi.set_kps(head_neck_tail_kps, head_neck_tail_ids)
-        # Set kds for all joints
-        self.hwi.set_kds(kds, all_joint_ids)
-        self.hwi.disable_torque(leg_joint_ids)
+        self.hwi.disable_torque(self.leg_joint_ids)
+        self.hwi.set_kps(head_neck_tail_kps, self.head_neck_tail_ids)
+        self.hwi.disable_torque(self.leg_joint_ids)
         
         print("Motors partially activated: head, neck and tail joints enabled at low torque")
         
@@ -237,26 +243,19 @@ class RLWalk:
         """Background thread to wait for safe leg position and then enable leg motors"""
         self.wait_for_safe_position()
         
-        # Get all joint IDs by name
-        head_neck_tail_joints = ["neck_pitch", "head_pitch", "head_yaw", "tail"]
-        leg_joints = [joint for joint in self.constants.JOINTS_ORDER if joint not in head_neck_tail_joints]
-        
-        # Get IDs for these joints
-        head_neck_tail_ids = [self.hwi.joints[joint] for joint in head_neck_tail_joints]
-        leg_joint_ids = [self.hwi.joints[joint] for joint in leg_joints]
-        
-        # Set kp values - kp=1 for head/neck/tail, normal pid for legs
-        head_neck_tail_kps = [1] * len(head_neck_tail_ids)
-        leg_kps = [self.pid[0]] * len(leg_joint_ids)
+        # Set kp values for leg joints
+        leg_kps = [self.pid[0]] * len(self.leg_joint_ids)
         
         # Apply kps to leg joints
-        self.hwi.set_kps(leg_kps, leg_joint_ids)
+        self.hwi.set_kps(leg_kps, self.leg_joint_ids)
+        
+        # Set the flag to indicate legs are now enabled
+        self.legs_enabled = True
         
         print("Hip pitch joints in safe position. Leg motors activated at normal torque.")
 
     def wait_for_safe_position(self, threshold_deg=20, check_interval=0.1):
         """Wait until hip pitch joints are within threshold of default position"""
-        print("here")
         threshold_rad = np.deg2rad(threshold_deg)
         
         # Get indices of hip pitch joints
@@ -280,11 +279,9 @@ class RLWalk:
     def run(self):
         i = 0
         try:
-            print("Starting")
-            start_t = time.time()
             while True:
                 t = time.time()
-                
+    
                 # Process controller input
                 self.process_controller_input()
                 
@@ -314,7 +311,8 @@ class RLWalk:
                     gyro=gyro,
                     contacts=contacts,
                     commands=self.commands,
-                    timestamp=time.time()
+                    timestamp=time.time(),
+                    head_rpy_offsets=self.head_teleop_client.get_rpy_offset(),
                 )
 
                 # self.action_filter.push(motor_targets)
@@ -324,14 +322,19 @@ class RLWalk:
                 joint_names = self.constants.JOINTS_ORDER
                 action_dict = {joint_names[i]: motor_targets[i] for i in range(len(motor_targets))}
                 
+                # Filter action_dict to include only head/neck/tail joints if legs not enabled
+                if not self.legs_enabled:
+                    action_dict = {k: v for k, v in action_dict.items() if k in self.head_neck_tail_joints}
+                
                 # Send commands to hardware
-                self.hwi.set_position_all(action_dict)
+                self.hwi.set_positions(action_dict)
 
                 i += 1
 
                 took = time.time() - t
                 if (1 / self.control_freq - took) < 0:
                     print("Policy control budget exceeded by", np.around(took - 1 / self.control_freq, 3),)
+                # print(took)
                 time.sleep(max(0, 1 / self.control_freq - took))
 
         except KeyboardInterrupt:

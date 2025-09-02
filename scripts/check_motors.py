@@ -1,5 +1,5 @@
-from pypot.feetech import FeetechSTS3215IO
 from mini_bdx_runtime.rustypot_position_hwi import HWI
+from pypot.feetech import FeetechSTS3215IO
 import argparse
 import time
 
@@ -7,7 +7,7 @@ import time
 NUM_SERVOS = 14  # Number of servos to scan
 io = FeetechSTS3215IO("/dev/ttyACM0")
 
-servo_dict = {value:key for key, value in HWI.joints.items()}
+servo_dict = {value:key for key, value in HWI().joints.items()}
 
 def scan():
     id = None

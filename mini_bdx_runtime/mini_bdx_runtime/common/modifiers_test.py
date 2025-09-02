@@ -1,6 +1,8 @@
 import time
 import random
 import math
+import requests
+import threading
 
 # Debug flag to control print statements
 DEBUG = False
@@ -12,7 +14,7 @@ class EpisodicPolicyModifier:
         self.constants = constants
     
     def modify(self, motor_commands, joint_pos=None, joint_vel=None, accel=None, 
-               gyro=None, contacts=None, commands=None, gravity=None, timestamp=None):
+               gyro=None, contacts=None, commands=None, gravity=None, timestamp=None, flags=None):
         """Simply pass through the original motor commands"""
         return motor_commands
 
@@ -24,7 +26,7 @@ class JoystickPolicyModifier:
         self.constants = constants
     
     def modify(self, motor_commands, joint_pos=None, joint_vel=None, accel=None, 
-               gyro=None, contacts=None, commands=None, gravity=None, timestamp=None):
+               gyro=None, contacts=None, commands=None, gravity=None, timestamp=None, flags=None):
         """Simply pass through the original motor commands"""
         return motor_commands
 
@@ -78,8 +80,9 @@ class StandingPolicyModifier:
         self.head_jitter_start_time = None
         self.head_jitter_duration = 2.0
         self.head_jitter_amplitude = 0.15
-        self.head_jitter_freq = 2.5  # Hz
-        
+        self.head_jitter_freq = 2.5  # Hz    
+
+
     def _random_interval(self, min_sec, max_sec):
         """Generate random time interval in seconds"""
         return random.uniform(min_sec, max_sec)
@@ -88,7 +91,7 @@ class StandingPolicyModifier:
         """Generate random tail wiggle pattern"""
         return [random.uniform(-self.wiggle_amplitude, self.wiggle_amplitude) 
                 for _ in range(len(self.tail_joint_indices))]
-    
+
     def _random_head_pose(self):
         """Generate random head pose sampling around the default position at 0.0"""
         random_pose = []
@@ -137,7 +140,7 @@ class StandingPolicyModifier:
         self.head_jitter_freq = random.uniform(4.0, 6.0)  # 2-3 Hz
     
     def modify(self, motor_commands, joint_pos=None, joint_vel=None, accel=None, 
-               gyro=None, contacts=None, commands=None, gravity=None, timestamp=None):
+               gyro=None, contacts=None, commands=None, gravity=None, timestamp=None, head_rpy_offsets=None):
         """Modify motor commands to add tail wiggling and head pose changes"""
         current_time = time.time() if timestamp is None else timestamp
         modified_commands = motor_commands.copy()
@@ -207,6 +210,7 @@ class StandingPolicyModifier:
                 # Wiggle completed
                 self.wiggle_start_time = None
                 
+                
         # Handle head movement differently based on mode
         if self.emergency_mode:
             # In emergency mode, jitter the head like the tail
@@ -234,12 +238,13 @@ class StandingPolicyModifier:
             if current_time - self.last_head_pose_time > self.next_head_pose_interval:
                 self.last_head_pose_time = current_time
                 self.next_head_pose_interval = self._random_interval(3, 8)
-                
-                # Generate and directly apply new random head pose
-                self.current_head_pose = self._random_head_pose()
+
                 if DEBUG:
-                    print("Changing head pose (normal)")
-                
+                    print("Changing head pose normal)")
+            
+            for i, idx in enumerate(self.head_joint_indices):
+                self.current_head_pose[idx] = head_rpy_offsets[i]
+
             # Apply current head pose directly to motor commands
             for i, idx in enumerate(self.head_joint_indices):
                 modified_commands[idx] = self.current_head_pose[i]
