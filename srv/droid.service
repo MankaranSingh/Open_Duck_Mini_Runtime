@@ -1,0 +1,16 @@
+[Unit]
+Description=Droid Service
+After=default.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/home/bdx/boot_droid.sh
+WorkingDirectory=/home/bdx
+User=bdx
+Restart=no
+StandardOutput=append:/home/bdx/droid.log
+StandardError=append:/home/bdx/droid.log
+
+[Install]
+WantedBy=multi-user.target
