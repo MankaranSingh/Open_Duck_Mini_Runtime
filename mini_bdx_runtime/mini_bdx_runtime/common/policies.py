@@ -453,7 +453,7 @@ class EpisodicOpenLoopPolicy:
     def advance_frame(self, rate=1):
         """Advance to the next frame in the reference motion"""
         self.imitation_i += rate
-        self.imitation_i %= min(self.imitation_i, self.n_frames-1)
+        self.imitation_i = min(self.imitation_i, self.n_frames-1)
         return self.imitation_i
         
     def infer(self, joint_pos, joint_vel, accel, gyro, contacts, commands=[1], gravity=None):
@@ -463,7 +463,7 @@ class EpisodicOpenLoopPolicy:
         self.advance_frame(commands[0])
         
         # Directly use reference motion as motor targets
-        motor_targets = current_reference_motion[self.EM.slices["joint_pos"]][self.constants.ISAAC_TO_MUJOCO]
+        motor_targets = current_reference_motion[self.EM.slices["joints_pos"]][self.constants.ISAAC_TO_MUJOCO]
         
         self.prev_motor_targets = motor_targets.copy()
         return motor_targets
