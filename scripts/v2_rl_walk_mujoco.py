@@ -225,7 +225,7 @@ class RLWalk:
     def start(self):
         """Initialize motors by enabling only head, neck, and tail joints"""
         # Set kp=1 for head/neck/tail joints only
-        head_neck_tail_kps = [10] * len(self.head_neck_tail_ids)
+        head_neck_tail_kps = [28] * len(self.head_neck_tail_ids)
         
         # Set kps for head/neck/tail joints only (with kp=1)
         self.hwi.disable_torque(self.leg_joint_ids)
@@ -333,8 +333,8 @@ class RLWalk:
                 
                 # Filter action_dict to include only head/neck/tail joints if legs not enabled
                 if not self.legs_enabled:
-                    action_dict = {k: v for k, v in action_dict.items() if k in self.head_neck_tail_joints}
-                
+                    action_dict = {k: v for k, v in action_dict.items() if k in self.head_neck_tail_joints + ["left_hip_yaw", "right_hip_yaw"]}
+
                 # Send commands to hardware
                 self.hwi.set_positions(action_dict)
 
