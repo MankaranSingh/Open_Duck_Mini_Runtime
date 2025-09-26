@@ -55,7 +55,7 @@ class RLWalk:
         
         self.reference_paths = {
             "episodic": f"{DATA_PATH}/{robot}/happy_dance.json",
-            "episodic_openloop": f"{DATA_PATH}/{robot}/wake_up.json",
+            "episodic_openloop": f"{DATA_PATH}/{robot}/{args.openloop_motion}.json",
         }
        
         # Initialize all policies 
@@ -369,6 +369,13 @@ if __name__ == "__main__":
         default="standing", 
         choices=["episodic", "joystick", "standing", "episodic_openloop"],
         help="Initial policy to use (episodic, joystick, standing, episodic_openloop)"
+    )
+    parser.add_argument(
+        "--openloop_motion", 
+        type=str, 
+        default="wake_up", 
+        choices=["wake_up", "sneeze"],
+        help="Initial policy to use (wake_up, sneeze)"
     )
     parser.add_argument(
         "--cutoff_freq", 
