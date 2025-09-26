@@ -410,3 +410,60 @@ class EpisodicPolicy:
                 
         self.prev_motor_targets = motor_targets.copy()
         return motor_targets
+
+
+class EpisodicOpenLoopPolicy:
+    """Policy for controlling the robot using episodic reference motion directly (open loop)"""
+    
+    def __init__(self, constants, reference_data_path="playground/open_duck_mini_v2/data/happy_dance.json"):
+        # Parameters
+        self.action_size = len(constants.JOINTS_ORDER)
+        self.constants = constants
+        
+        # Initialize episodic loader
+        self.EM = EpisodicLoader(reference_data_path)
+        self.imitation_i = 0
+        self.n_frames = self.EM.n_frames
+        
+        # State tracking
+        self.prev_motor_targets = constants.DEFAULT_ACTUATOR_POS.copy()
+        self.default_actuator = constants.DEFAULT_ACTUATOR_POS.copy()
+
+        self.max_motor_velocity = 5.24  # rad/s
+        self.decimation = DECIMATION
+        
+        print(f"Episodic open loop policy loaded")
+        print(f"Reference data loaded from {reference_data_path} with {self.n_frames} frames")
+    
+    def reset(self):
+        """Reset the policy state"""
+        self.imitation_i = 0
+        self.prev_motor_targets = self.default_actuator.copy()
+    
+    def get_default_commands(self):
+        """Get default commands for the episodic policy"""
+        return [1]
+    
+    def joystick_to_commands(self, joystick_values):        
+        return [1]
+
+    def key_to_commands(self, keycode):
+        return [1]
+    
+    def advance_frame(self, rate=1):
+        """Advance to the next frame in the reference motion"""
+        self.imitation_i += rate
+        self.imitation_i %= min(self.imitation_i, self.n_frames-1)
+        return self.imitation_i
+        
+    def infer(self, joint_pos, joint_vel, accel, gyro, contacts, commands=[1], gravity=None):
+        """Process observations to get actions, commands is phase rate"""
+        # Get current reference motion
+        current_reference_motion = self.EM.get_reference_motion(self.imitation_i)
+        self.advance_frame(commands[0])
+        
+        # Directly use reference motion as motor targets
+        motor_targets = current_reference_motion[self.EM.slices["joint_pos"]][self.constants.ISAAC_TO_MUJOCO]
+        
+        self.prev_motor_targets = motor_targets.copy()
+        return motor_targets

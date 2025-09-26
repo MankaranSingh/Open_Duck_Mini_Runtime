@@ -80,15 +80,7 @@ class HWI:
         joint_ids = joint_ids or list(self.joints.values())
         self.io.disable_torque(joint_ids)
 
-    def set_position(self, joint_name, pos):
-        """
-        pos is in radians
-        """
-        id = self.joints[joint_name]
-        pos = pos + self.joints_offsets[joint_name]
-        self.io.write_goal_position([id], [pos])
-
-    def set_position_all(self, joints_positions):
+    def set_positions(self, joints_positions):
         """
         joints_positions is a dictionary with joint names as keys and joint positions as values
         Warning: expects radians
@@ -99,7 +91,7 @@ class HWI:
         }
 
         self.io.write_goal_position(
-            list(self.joints.values()), list(ids_positions.values())
+            list(ids_positions.keys()), list(ids_positions.values())
         )
 
     def get_present_positions(self, ignore=[]):

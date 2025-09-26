@@ -13,8 +13,8 @@ from mini_bdx_runtime.eyes import Eyes
 #from mini_bdx_runtime.antennas import Antennas
 #from mini_bdx_runtime.projector import Projector
 from mini_bdx_runtime.common import mini2_constants, dino_constants
-from mini_bdx_runtime.common.policies import JoystickPolicy, StandingPolicy, EpisodicPolicy
-from mini_bdx_runtime.common.modifiers import JoystickPolicyModifier, StandingPolicyModifier, EpisodicPolicyModifier
+from mini_bdx_runtime.common.policies import JoystickPolicy, StandingPolicy, EpisodicPolicy, EpisodicOpenLoopPolicy
+from mini_bdx_runtime.common.modifiers import JoystickPolicyModifier, StandingPolicyModifier, EpisodicPolicyModifier, EpisodicOpenLoopModifier
 
 
 class RLWalk:
@@ -55,6 +55,7 @@ class RLWalk:
         
         self.reference_paths = {
             "episodic": f"{DATA_PATH}/{robot}/happy_dance.json",
+            "episodic_openloop": f"{DATA_PATH}/{robot}/wake_up.json",
         }
        
         # Initialize all policies 
@@ -62,14 +63,16 @@ class RLWalk:
         self.policies = {
             "joystick": JoystickPolicy(self.constants, self.model_paths["joystick"]),
             "standing": StandingPolicy(self.constants, self.model_paths["standing"]),
-            "episodic": EpisodicPolicy(self.constants, self.model_paths["episodic"], self.reference_paths["episodic"])
+            "episodic": EpisodicPolicy(self.constants, self.model_paths["episodic"], self.reference_paths["episodic"]),
+            "episodic_openloop": EpisodicOpenLoopPolicy(self.constants, self.reference_paths["episodic_openloop"])
         }
 
         # Initialize policy modifiers
         self.policy_modifiers = {
             "joystick": JoystickPolicyModifier(self.constants),
             "standing": StandingPolicyModifier(self.constants),
-            "episodic": EpisodicPolicyModifier(self.constants)
+            "episodic": EpisodicPolicyModifier(self.constants),
+            "episodic_openloop": EpisodicOpenLoopModifier(self.constants)
         }
         
         # Set initial active policy
@@ -102,6 +105,18 @@ class RLWalk:
         self.controller_thread.daemon = True  # Thread will exit when main program exits
         self.controller_thread.start()
 
+        # Flag to track if legs are safe to control
+        self.legs_enabled = False
+        
+        # Define joint groups once
+        self.head_neck_tail_joints = ["neck_pitch", "head_pitch", "head_yaw", "tail"]
+        self.leg_joints = [joint for joint in self.constants.JOINTS_ORDER 
+                          if joint not in self.head_neck_tail_joints]
+        
+        # Store joint IDs once
+        self.head_neck_tail_ids = [self.hwi.joints[joint] for joint in self.head_neck_tail_joints]
+        self.leg_joint_ids = [self.hwi.joints[joint] for joint in self.leg_joints]
+        
         # Initialize motors without enabling torque for legs
         self.start()
 
@@ -152,7 +167,7 @@ class RLWalk:
             if self.policy.imitation_i == 0:  # Allow small tolerance
                 self.complete_policy_switch()
                 return
-       
+            
     def complete_policy_switch(self):
         """Complete the policy switch once conditions are met"""
         print(f"Switching from {self.active_policy_type} to {self.target_policy_type} policy")
@@ -174,7 +189,12 @@ class RLWalk:
         imu_data = self.imu.get_data()
         accelerometer = imu_data["accel"]
         gyro = imu_data["gyro"]
-        contacts = self.feet_contacts.get()
+        
+        # If legs are not enabled yet, simulate ground contacts for stability
+        if not self.legs_enabled:
+            contacts = [True, True]  # Both feet in contact with ground
+        else:
+            contacts = self.feet_contacts.get()
 
         return joint_angles, joint_vel, accelerometer, gyro, contacts
     
@@ -204,59 +224,46 @@ class RLWalk:
 
     def start(self):
         """Initialize motors by enabling only head, neck, and tail joints"""
-        # Set initial low kp for head/neck/tail joints
-        head_neck_tail_joints = ["neck_pitch", "head_pitch", "head_yaw", "tail"]
-        leg_joints = [joint for joint in self.constants.JOINTS_ORDER if joint not in head_neck_tail_joints]
-        
-        # Get IDs for these joints
-        head_neck_tail_ids = [self.hwi.joints[joint] for joint in head_neck_tail_joints]
-        leg_joint_ids = [self.hwi.joints[joint] for joint in leg_joints]
-        
         # Set kp=1 for head/neck/tail joints only
-        head_neck_tail_kps = [1] * len(head_neck_tail_ids)
-        
-        # Set kd values for all joints
-        all_joint_ids = list(self.hwi.joints.values())
-        kds = [self.pid[2]] * len(all_joint_ids)
+        head_neck_tail_kps = [10] * len(self.head_neck_tail_ids)
         
         # Set kps for head/neck/tail joints only (with kp=1)
-        self.hwi.disable_torque()
-        self.hwi.set_kps(head_neck_tail_kps, head_neck_tail_ids)
-        # Set kds for all joints
-        self.hwi.set_kds(kds, all_joint_ids)
-        self.hwi.disable_torque(leg_joint_ids)
+        self.hwi.disable_torque(self.leg_joint_ids)
+        self.hwi.set_kps(head_neck_tail_kps, self.head_neck_tail_ids)
+        self.hwi.disable_torque(self.leg_joint_ids)
         
         print("Motors partially activated: head, neck and tail joints enabled at low torque")
         
-        # Start a background thread to wait for safe position and enable leg joints
-        self.safe_position_thread = threading.Thread(target=self.enable_legs_when_safe)
-        self.safe_position_thread.daemon = True
-        self.safe_position_thread.start()
+        # Don't enable legs for episodic_openloop policy
+        if self.active_policy_type != "episodic_openloop":
+            # Start a background thread to wait for safe position and enable leg joints
+            self.safe_position_thread = threading.Thread(target=self.enable_legs_when_safe)
+            self.safe_position_thread.daemon = True
+            self.safe_position_thread.start()
+        else:
+            print("episodic_openloop policy: legs will remain disabled")
     
     def enable_legs_when_safe(self):
         """Background thread to wait for safe leg position and then enable leg motors"""
+        # Don't enable legs for episodic_openloop policy
+        if self.active_policy_type == "episodic_openloop":
+            return
+            
         self.wait_for_safe_position()
         
-        # Get all joint IDs by name
-        head_neck_tail_joints = ["neck_pitch", "head_pitch", "head_yaw", "tail"]
-        leg_joints = [joint for joint in self.constants.JOINTS_ORDER if joint not in head_neck_tail_joints]
-        
-        # Get IDs for these joints
-        head_neck_tail_ids = [self.hwi.joints[joint] for joint in head_neck_tail_joints]
-        leg_joint_ids = [self.hwi.joints[joint] for joint in leg_joints]
-        
-        # Set kp values - kp=1 for head/neck/tail, normal pid for legs
-        head_neck_tail_kps = [1] * len(head_neck_tail_ids)
-        leg_kps = [self.pid[0]] * len(leg_joint_ids)
+        # Set kp values for leg joints
+        leg_kps = [self.pid[0]] * len(self.leg_joint_ids)
         
         # Apply kps to leg joints
-        self.hwi.set_kps(leg_kps, leg_joint_ids)
+        self.hwi.set_kps(leg_kps, self.leg_joint_ids)
+        
+        # Set the flag to indicate legs are now enabled
+        self.legs_enabled = True
         
         print("Hip pitch joints in safe position. Leg motors activated at normal torque.")
 
     def wait_for_safe_position(self, threshold_deg=20, check_interval=0.1):
         """Wait until hip pitch joints are within threshold of default position"""
-        print("here")
         threshold_rad = np.deg2rad(threshold_deg)
         
         # Get indices of hip pitch joints
@@ -324,8 +331,12 @@ class RLWalk:
                 joint_names = self.constants.JOINTS_ORDER
                 action_dict = {joint_names[i]: motor_targets[i] for i in range(len(motor_targets))}
                 
+                # Filter action_dict to include only head/neck/tail joints if legs not enabled
+                if not self.legs_enabled:
+                    action_dict = {k: v for k, v in action_dict.items() if k in self.head_neck_tail_joints}
+                
                 # Send commands to hardware
-                self.hwi.set_position_all(action_dict)
+                self.hwi.set_positions(action_dict)
 
                 i += 1
 
@@ -356,8 +367,8 @@ if __name__ == "__main__":
         "--policy_type", 
         type=str, 
         default="standing", 
-        choices=["episodic", "joystick", "standing"],
-        help="Initial policy to use (episodic, joystick, standing)"
+        choices=["episodic", "joystick", "standing", "episodic_openloop"],
+        help="Initial policy to use (episodic, joystick, standing, episodic_openloop)"
     )
     parser.add_argument(
         "--cutoff_freq", 

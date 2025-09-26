@@ -245,3 +245,15 @@ class StandingPolicyModifier:
                 modified_commands[idx] = self.current_head_pose[i]
         
         return modified_commands
+
+
+class EpisodicOpenLoopModifier:
+    """Modifier for Episodic Open Loop Policy - passes through original motor commands"""
+    
+    def __init__(self, constants):
+        self.constants = constants
+    
+    def modify(self, motor_commands, joint_pos=None, joint_vel=None, accel=None, 
+               gyro=None, contacts=None, commands=None, gravity=None, timestamp=None):
+        """Simply pass through the original motor commands"""
+        return motor_commands
