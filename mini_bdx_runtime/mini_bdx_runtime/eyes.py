@@ -1,16 +1,11 @@
 import pigpio
 import numpy as np
 import time
-import random
-from threading import Thread
 
 # RGB LED pins
 RED_PIN = 19
 GREEN_PIN = 26
 BLUE_PIN = 13
-
-# Default eye color (dark blue)
-EYE_COLOR = np.array([8, 29, 54])/255
 
 
 class Eyes:
@@ -22,8 +17,6 @@ class Eyes:
         
         # PWM range for pigpio is 0-255
         self._pwm_range = 255
-        
-        Thread(target=self.run, daemon=True).start()
 
     def set_color(self, r, g, b):
         """Set LED color with floats 0.0–1.0"""
@@ -35,30 +28,10 @@ class Eyes:
         self.pi.set_PWM_dutycycle(RED_PIN, r_val)
         self.pi.set_PWM_dutycycle(GREEN_PIN, g_val)
         self.pi.set_PWM_dutycycle(BLUE_PIN, b_val)
-
-    def blink(self, r=1.0, g=0.0, b=0.0):
-        """Solid blink (no fade, just off/on)"""
-        # Eye closes
-        self.set_color(0, 0, 0)
-        time.sleep(random.uniform(0.08, 0.12))  # blink duration
-        # Eye opens
-        self.set_color(r, g, b)
-
-    def run(self):
-        while True:
-            # Eye stays on
-            self.set_color(*EYE_COLOR)  # set to eye color
-            
-            # Wait random time before blink
-            time.sleep(random.uniform(3, 8))
-
-            # Normal blink
-            self.blink(*EYE_COLOR)
-
-            # ~10% chance of a quick second blink
-            if random.random() < 0.1:
-                time.sleep(random.uniform(0.08, 0.15))  # short pause
-                self.blink(*EYE_COLOR)
+        
+    def set_color_rgb(self, rgb_tuple):
+        """Set LED color with RGB tuple of floats 0.0–1.0"""
+        self.set_color(rgb_tuple[0], rgb_tuple[1], rgb_tuple[2])
 
     def cleanup(self):
         # Turn off all LEDs
@@ -71,9 +44,23 @@ class Eyes:
 
 
 if __name__ == "__main__":
-    e = Eyes()
+    from common.expressions import BlinkingEyes
+    
+    eyes = Eyes()
+    blinking_eyes = BlinkingEyes()
+    
     try:
         while True:
-            time.sleep(1)
+            start_time = time.time()
+            
+            # Update blinking logic and get color
+            color = blinking_eyes.update()
+            eyes.set_color_rgb(color)
+            
+            # Maintain 50Hz timing
+            elapsed = time.time() - start_time
+            sleep_time = max(0, 0.02 - elapsed)  # 50Hz = 20ms
+            time.sleep(sleep_time)
+            
     except KeyboardInterrupt:
-        e.cleanup()
+        eyes.cleanup()
