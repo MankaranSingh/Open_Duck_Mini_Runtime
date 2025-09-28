@@ -328,8 +328,8 @@ class RLWalk:
 
                 if expression is None:
                     expression = self.default_expression.update()
-                eyes.set_color_rgb(expression.eyes_rgb)
-                
+                self.eyes.set_color_rgb(expression.eyes_rgb)
+
                 # self.action_filter.push(motor_targets)
                 # motor_targets = self.action_filter.get_filtered_action()
 
