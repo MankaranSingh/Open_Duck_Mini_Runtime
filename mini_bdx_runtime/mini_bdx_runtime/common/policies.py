@@ -2,6 +2,7 @@ import numpy as np
 from mini_bdx_runtime.common.onnx_infer import OnnxInfer
 from mini_bdx_runtime.common.episodic_loader import EpisodicLoader
 from mini_bdx_runtime.common.gait_blending import gait_sample_data, gait_sample_data_med_only, vel_to_step, blend_gait_parameters
+from mini_bdx_runtime.common.expressions import Expression
 
 DECIMATION = 1
 
@@ -177,7 +178,9 @@ class JoystickPolicy:
         self.last_action = action.copy()
 
         motor_targets = (self.default_actuator + self.full_action * self.action_scale)
-        return motor_targets
+
+        expression = None
+        return motor_targets, expression
 
 class StandingPolicy:
     """Policy for controlling the robot in standing mode"""
@@ -317,7 +320,9 @@ class StandingPolicy:
         motor_targets = self.default_actuator + self.full_action * self.action_scale
         
         self.prev_motor_targets = motor_targets.copy()
-        return motor_targets
+
+        expression = None
+        return motor_targets, expression
 
 class EpisodicPolicy:
     """Policy for controlling the robot using episodic reference motion"""
@@ -409,7 +414,9 @@ class EpisodicPolicy:
         motor_targets = self.default_actuator + action * self.action_scale
                 
         self.prev_motor_targets = motor_targets.copy()
-        return motor_targets
+
+        expression = None
+        return motor_targets, expression
 
 
 class EpisodicOpenLoopPolicy:
@@ -464,6 +471,10 @@ class EpisodicOpenLoopPolicy:
         
         # Directly use reference motion as motor targets
         motor_targets = current_reference_motion[self.EM.slices["joints_pos"]][self.constants.ISAAC_TO_MUJOCO]
+        eyes_rgb = current_reference_motion[self.EM.slices["eyes_color"]]
+        eyes_strength = current_reference_motion[self.EM.slices["eyes_strength"]]
         
         self.prev_motor_targets = motor_targets.copy()
-        return motor_targets
+
+        expression = Expression(eyes_rgb, eyes_strength)
+        return motor_targets, expression    

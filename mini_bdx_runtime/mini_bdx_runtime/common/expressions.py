@@ -5,9 +5,10 @@ import numpy as np
 EYE_COLOR = np.array([8, 29, 54])/255
 
 class Expression:
-    def __init__(self):
-        self.eyes_rgb = (1.0, 1.0, 1.0)  # Default white color
-        self.sound = None
+    def __init__(self, eyes_rgb=(1.0, 1.0, 1.0), eyes_strength=1.0, sound=None):
+        self.eyes_rgb = eyes_rgb
+        self.eyes_strength = eyes_strength
+        self.sound = sound
 
 
 class BlinkingEyes:
@@ -78,7 +79,7 @@ class BlinkingEyes:
                 self._next_blink_frame = self._generate_next_blink_frame()
         
         self._frame_counter += 1
-        return self._current_color
+        return Expression(self._current_color)
         
     def get_current_color(self):
         """Get current eye color without updating state"""

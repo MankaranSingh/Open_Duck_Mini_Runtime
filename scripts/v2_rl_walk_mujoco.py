@@ -9,6 +9,7 @@ from mini_bdx_runtime.xbox_controller import XBoxController
 from mini_bdx_runtime.feet_contacts import FeetContacts
 from mini_bdx_runtime.common.utils import LowPassActionFilter
 from mini_bdx_runtime.eyes import Eyes
+from mini_bdx_runtime.common.expressions import BlinkingEyes
 #from mini_bdx_runtime.sounds import Sounds
 #from mini_bdx_runtime.antennas import Antennas
 #from mini_bdx_runtime.projector import Projector
@@ -37,6 +38,7 @@ class RLWalk:
         #self.sounds = Sounds(volume=1.0, sound_directory="../mini_bdx_runtime/assets/")
         #self.antennas = Antennas()
         self.eyes = Eyes()
+        self.default_expression = BlinkingEyes()
         #self.projector = Projector()
 
         self.hwi = HWI(serial_port)
@@ -313,7 +315,7 @@ class RLWalk:
                 )
 
                 # Apply policy modifier with all the same parameters
-                motor_targets = self.policy_modifier.modify(
+                motor_targets, expression = self.policy_modifier.modify(
                     motor_targets,
                     joint_pos=joint_angles,
                     joint_vel=joint_vel,
@@ -324,8 +326,14 @@ class RLWalk:
                     timestamp=time.time()
                 )
 
+                if expression is None:
+                    expression = self.default_expression.update()
+                eyes.set_color_rgb(expression.eyes_rgb)
+                
                 # self.action_filter.push(motor_targets)
                 # motor_targets = self.action_filter.get_filtered_action()
+
+                
                 
                 # Create joint dictionary for hardware interface
                 joint_names = self.constants.JOINTS_ORDER
