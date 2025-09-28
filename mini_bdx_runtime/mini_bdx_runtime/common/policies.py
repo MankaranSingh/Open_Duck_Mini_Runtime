@@ -473,12 +473,11 @@ class EpisodicOpenLoopPolicy:
         motor_targets = current_reference_motion[self.EM.slices["joints_pos"]][self.constants.ISAAC_TO_MUJOCO]
 
         if self.EM.slices.get("eyes_color", None) is not None:
-            eyes_rgb = current_reference_motion[self.EM.slices["eyes_color"]]
+            eyes_rgb = np.array(current_reference_motion[self.EM.slices["eyes_color"]])
             eyes_strength = current_reference_motion[self.EM.slices["eyes_strength"]]
-            expression = Expression(eyes_rgb, eyes_strength)
+            expression = Expression(eyes_rgb*eyes_strength/4, eyes_strength)
         else:
             expression = None
             
         self.prev_motor_targets = motor_targets.copy()
-
         return motor_targets, expression
