@@ -3,9 +3,9 @@ import numpy as np
 import time
 
 # RGB LED pins
-RED_PIN = 19
-GREEN_PIN = 26
-BLUE_PIN = 13
+RED_PIN = 6
+GREEN_PIN = 13
+BLUE_PIN = 26
 
 
 class Eyes:
@@ -63,4 +63,4 @@ if __name__ == "__main__":
             time.sleep(sleep_time)
             
     except KeyboardInterrupt:
-        eyes.cleanup()
+    eyes.cleanup()
