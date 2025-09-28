@@ -63,4 +63,4 @@ if __name__ == "__main__":
             time.sleep(sleep_time)
             
     except KeyboardInterrupt:
-    eyes.cleanup()
+        eyes.cleanup()
