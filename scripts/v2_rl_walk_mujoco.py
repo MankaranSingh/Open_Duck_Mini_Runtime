@@ -227,13 +227,13 @@ class RLWalk:
     def start(self):
         """Initialize motors by enabling only head, neck, and tail joints"""
         # Set kp=1 for head/neck/tail joints only
-        head_neck_tail_kps = [32] * len(self.head_neck_tail_ids)
+        head_neck_tail_kps = [32] * len(self.head_neck_tail_joints)
         
         # Set kps for head/neck/tail joints only (with kp=1)
-        self.hwi.disable_torque(self.leg_joint_ids)
-        self.hwi.set_kps(head_neck_tail_kps, self.head_neck_tail_ids)
-        self.hwi.disable_torque(self.leg_joint_ids)
-        
+        self.hwi.disable_torque(self.leg_joints)
+        self.hwi.set_kps(head_neck_tail_kps, self.head_neck_tail_joints)
+        self.hwi.disable_torque(self.leg_joints)
+
         print("Motors partially activated: head, neck and tail joints enabled at low torque")
         
         # Don't enable legs for episodic_openloop policy
@@ -254,10 +254,10 @@ class RLWalk:
         self.wait_for_safe_position()
         
         # Set kp values for leg joints
-        leg_kps = [self.pid[0]] * len(self.leg_joint_ids)
+        leg_kps = [self.pid[0]] * len(self.leg_joints)
         
         # Apply kps to leg joints
-        self.hwi.set_kps(leg_kps, self.leg_joint_ids)
+        self.hwi.set_kps(leg_kps, self.leg_joints)
         
         # Set the flag to indicate legs are now enabled
         self.legs_enabled = True
