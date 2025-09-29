@@ -65,19 +65,22 @@ class HWI:
       
         self.io = rustypot.feetech(usb_port, 1000000)
 
-    def set_kps(self, kps, joint_ids=None):
-        joint_ids = joint_ids or list(self.joints.values())
+    def set_kps(self, kps, joints=None):
+        joints = joints or list(self.joints.keys())
+        joint_ids = [self.joints[joint] for joint in joints]
         self.io.set_kps(joint_ids, kps)
 
-    def set_kds(self, kds, joint_ids=None):
-        joint_ids = joint_ids or list(self.joints.values())
+    def set_kds(self, kds, joints=None):
+        joints = joints or list(self.joints.keys())
+        joint_ids = [self.joints[joint] for joint in joints]
         self.io.set_kds(joint_ids, kds)
 
     def set_kp(self, id, kp):
         self.io.set_kps([id], [kp])
 
-    def disable_torque(self, joint_ids=None):
-        joint_ids = joint_ids or list(self.joints.values())
+    def disable_torque(self, joints=None):
+        joints = joints or list(self.joints.keys())
+        joint_ids = [self.joints[joint] for joint in joints]
         self.io.disable_torque(joint_ids)
 
     def set_positions(self, joints_positions):
@@ -94,32 +97,35 @@ class HWI:
             list(ids_positions.keys()), list(ids_positions.values())
         )
 
-    def get_present_positions(self, ignore=[]):
+    def get_present_positions(self, joints=None):
         """
         Returns the present positions in radians
         """
-        present_positions = self.io.read_present_position(list(self.joints.values()))
+        joints = joints or list(self.joints.keys())
+        joint_ids = [self.joints[joint] for joint in joints]
+        
+        present_positions = self.io.read_present_position(joint_ids)
         present_positions = [
             pos - self.joints_offsets[joint]
-            for joint, pos in zip(self.joints.keys(), present_positions)
-            if joint not in ignore
+            for joint, pos in zip(joints, present_positions)
         ]
         return np.array(present_positions)
 
-    def get_present_velocities(self, ignore=[]):
+    def get_present_velocities(self, joints=None):
         """
         Returns the present velocities in rad/s
         """
-        present_velocities = self.io.read_present_velocity(list(self.joints.values()))
-        present_velocities = [
-            vel
-            for joint, vel in zip(self.joints.keys(), present_velocities)
-            if joint not in ignore
-        ]
+        joints = joints or list(self.joints.keys())
+        joint_ids = [self.joints[joint] for joint in joints]
+        
+        present_velocities = self.io.read_present_velocity(joint_ids)
         return np.array(present_velocities)
 
-    def get_present_voltages(self):
-        return np.array(self.control.io.get_present_voltage(self.joints.values())) * 0.1
+    def get_present_voltages(self, joints=None):
+        joints = joints or list(self.joints.keys())
+        joint_ids = [self.joints[joint] for joint in joints]
+        
+        return np.array(self.io.get_present_voltage(joint_ids)) * 0.1
 
 if __name__ == "__main__":
     hwi = HWI()
