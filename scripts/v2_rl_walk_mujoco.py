@@ -305,7 +305,7 @@ class RLWalk:
                 joint_angles, joint_vel, accelerometer, gyro, contacts = self.get_sensors()
                 
                 # Use the policy to get motor commands
-                motor_targets = self.policy.infer(
+                motor_targets, expression = self.policy.infer(
                     joint_angles, 
                     joint_vel, 
                     accelerometer, 
@@ -315,7 +315,7 @@ class RLWalk:
                 )
 
                 # Apply policy modifier with all the same parameters
-                motor_targets, expression = self.policy_modifier.modify(
+                motor_targets = self.policy_modifier.modify(
                     motor_targets,
                     joint_pos=joint_angles,
                     joint_vel=joint_vel,
