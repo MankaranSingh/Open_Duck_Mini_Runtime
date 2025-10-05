@@ -2,8 +2,22 @@ import socket
 import threading
 import numpy as np
 
+def get_local_ip(self):
+    """Return the local IP address of this machine."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Doesn't have to be reachable — just used to get local IP
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = "127.0.0.1"
+    finally:
+        s.close()
+    return ip
+
 class HeadTelop:
-    def __init__(self, host="192.168.77.208", port=5000):
+    def __init__(self, host=get_local_ip(), port=5000):
+        print(host)
         self.host = host
         self.port = port
         self._calibration_offset = None
