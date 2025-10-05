@@ -55,7 +55,7 @@ class HeadTelop:
                     continue
 
                 # Calculate relative values
-                rel_yaw = self._calibration_offset[0] - yaw
+                rel_yaw = -(self._calibration_offset[0] - yaw)
                 rel_pitch = self._calibration_offset[1] - pitch
                 rel_roll = self._calibration_offset[2] - roll 
 
