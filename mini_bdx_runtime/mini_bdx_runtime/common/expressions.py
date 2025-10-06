@@ -2,7 +2,7 @@ import random
 import numpy as np
 
 # Default eye color (dark blue)
-EYE_COLOR = np.array([100, 100, 100])/255
+EYE_COLOR = np.array([50, 50, 50])/255
 
 class Expression:
     def __init__(self, eyes_rgb=(1.0, 1.0, 1.0), eyes_strength=1.0, sound=None):

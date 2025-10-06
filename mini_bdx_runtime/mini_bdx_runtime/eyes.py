@@ -3,9 +3,9 @@ import numpy as np
 import time
 
 # RGB LED pins
-RED_PIN = 6
-GREEN_PIN = 13
-BLUE_PIN = 26
+RED_PIN = 19
+GREEN_PIN = 26
+BLUE_PIN = 13
 
 
 class Eyes:
@@ -54,7 +54,7 @@ if __name__ == "__main__":
             start_time = time.time()
             
             # Update blinking logic and get color
-            color = blinking_eyes.update()
+            color = blinking_eyes.update().eyes_rgb
             eyes.set_color_rgb(color)
             
             # Maintain 50Hz timing
