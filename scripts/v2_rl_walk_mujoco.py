@@ -382,7 +382,7 @@ if __name__ == "__main__":
         "--openloop_motion", 
         type=str, 
         default="wake_up", 
-        choices=["wake_up", "sneeze"],
+        choices=["wake_up", "sneeze", "awooo", "laughing"],
         help="Initial policy to use (wake_up, sneeze)"
     )
     parser.add_argument(
