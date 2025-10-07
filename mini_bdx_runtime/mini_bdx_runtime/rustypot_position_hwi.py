@@ -41,22 +41,22 @@ class HWI:
         }
 
         self.joints_offsets = {
-            "neck_pitch": 0.17794177139473444,
-            "head_pitch": 0.05982525072754008,
-            "head_yaw": 0.08897088569736722,
-            "tail": 0.1012427320004523,
-            "right_hip_yaw": -0.019941750242513212,
-            "right_hip_roll": -0.006135923151542766,
-            "right_hip_pitch": 0.09203884727313838,
-            "right_knee": 2.908427573831176,
-            "right_ankle": -0.411106851153352,
-            "left_hip_yaw": -0.16260196351587775,
-            "left_hip_roll": -0.01380582709097089,
-            "left_hip_pitch": -1.5661943844312396,
-            "left_knee": 0.07516505860639633,
-            "left_ankle": 0.18714565612204836,
-        }
+            "neck_pitch": 0.1150485590914232,
+            "head_pitch": -0.06442719309119704,
+            "head_yaw": -0.012271846303085088,
+            "tail": 0.05829126993965428,
+            "right_hip_yaw": 0.05982525072754008,
+            "right_hip_roll": 0.03681553890925526,
+            "right_hip_pitch": 0.11811652066719436,
+            "right_knee": 0.07363107781851097,
+            "right_ankle": -0.3558835427894689,
+            "left_hip_yaw": -0.0674951546669682,
+            "left_hip_roll": 0.052155346788111956,
+            "left_hip_pitch": -1.4588157292792447,
+            "left_knee": 0.385029177759296,
+            "left_ankle": 0.41570879351700896,
 
+        }
         init_pos_with_offsets = {
             joint: np.rad2deg(pos + self.joints_offsets[joint])
             for joint, pos in self.init_pos.items()
