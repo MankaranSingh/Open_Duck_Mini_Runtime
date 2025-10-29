@@ -3,7 +3,7 @@ import rustypot
 
 
 class HWI:
-    def __init__(self, usb_port="/dev/ttyACM0"):
+    def __init__(self, usb_port="/dev/ttyAMA0"):
 
         # Order matters here
         self.joints = {
@@ -41,20 +41,21 @@ class HWI:
         }
 
         self.joints_offsets = {
-            "neck_pitch": 1.580,
-            "head_pitch": 1.730,
-            "head_yaw": 0.01073,
-            "tail": 0.0705,
-            "right_hip_yaw": 1.032,
-            "right_hip_roll": -0.0552,
-            "right_hip_pitch": -1.049,
-            "right_knee": -0.464,
-            "right_ankle": 1.951,
-            "left_hip_yaw": -0.0782,
-            "left_hip_roll": 0.03528,
-            "left_hip_pitch": 1.026,
-            "left_knee": 0.3466,
-            "left_ankle": 0.975,
+            "neck_pitch": 1.4772234987338724,
+            "head_pitch": 1.7932235410383148,
+            "head_yaw": 0.03067961575771294,
+            "tail": 0.07056311624273937,
+            "right_hip_yaw": 1.0829904362472629,
+            "right_hip_roll": -0.07363107781851097,
+            "right_hip_pitch": -0.9970875121256668,
+            "right_knee": -0.5062136600022615,
+            "right_ankle": 1.9450876390389933,
+            "left_hip_yaw": -0.05522330836388312,
+            "left_hip_roll": 0.01380582709097089,
+            "left_hip_pitch": 1.0016894544893233,
+            "left_knee": 0.4417864669110645,
+            "left_ankle": 1.0369710126106932,
+
         }
 
         init_pos_with_offsets = {

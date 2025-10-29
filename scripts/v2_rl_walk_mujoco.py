@@ -20,7 +20,7 @@ from mini_bdx_runtime.common.head_teleop_client import HeadTelop
 class RLWalk:
     def __init__(
         self,
-        serial_port: str = "/dev/ttyACM0",
+        serial_port: str = "/dev/ttyAMA0",
         control_freq: float = 50,
         pid=[20, 0, 0],
         robot="dino",

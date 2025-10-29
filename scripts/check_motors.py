@@ -5,21 +5,22 @@ import time
 
 
 NUM_SERVOS = 14  # Number of servos to scan
-io = FeetechSTS3215IO("/dev/ttyACM0")
+io = FeetechSTS3215IO("/dev/ttyAMA0")
 
-servo_dict = {value:key for key, value in HWI().joints.items()}
+servo_dict = {value:key for key, value in HWI("/dev/ttyAMA0").joints.items()}
 
 def scan():
-    id = None
-    for i in range(NUM_SERVOS):
+    id = 0
+    while True:
+        for i in range(NUM_SERVOS):
 
-        print(f"scanning for id {i} ...")
-        try:
-            io.get_present_position([i])
-            id = i
-            print(f"Found motor {servo_dict[id]} with id {id}")
-        except Exception as e:
-            print(f"Motor {servo_dict[id]} with id {i} not found: {e}")
+            print(f"scanning for id {i} ...")
+            try:
+                io.get_present_position([i])
+                id = i
+                print(f"Found motor {servo_dict[id]} with id {id}")
+            except Exception as e:
+                print(f"Motor {servo_dict[id]} with id {i} not found: {e}")
 
 
 scan()
