@@ -2,9 +2,8 @@ import RPi.GPIO as GPIO
 import numpy as np
 
 
-LEFT_FOOT_PIN = 27
-RIGHT_FOOT_PIN = 22
-
+LEFT_FOOT_PIN = 22
+RIGHT_FOOT_PIN = 4
 
 class FeetContacts:
     def __init__(self):
