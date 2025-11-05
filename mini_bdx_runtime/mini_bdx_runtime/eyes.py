@@ -9,6 +9,7 @@ RED_PIN = 19
 GREEN_PIN = 13
 BLUE_PIN = 26
 
+
 # Default eye color (dark blue)
 EYE_COLOR = np.array([80, 80, 80])/255
 
