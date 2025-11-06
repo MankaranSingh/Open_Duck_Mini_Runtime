@@ -303,7 +303,6 @@ class RLWalk:
                     self.commands
                 )
 
-                print(self.head_teleop_client.get_rpy_offset())
                 # Apply policy modifier with all the same parameters
                 motor_targets = self.policy_modifier.modify(
                     motor_targets,
